@@ -1,0 +1,31 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: tfc-summit
+  region: us-east-1
+  version: '1.21'
+  tags:
+    karpenter.sh/discovery: tfc-summit
+vpc:
+  clusterEndpoints:
+      publicAccess: true
+      privateAccess: true  
+availabilityZones: ["us-east-1a","us-east-1b"]       
+iam:
+  withOIDC: true
+
+managedNodeGroups:
+  - name: managed-ng2
+    instanceType: c5d.xlarge
+    amiFamily: AmazonLinux2
+    preBootstrapCommands:
+      - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
+      - "sudo mount -a"
+      - "sudo chown ec2-user:ec2-user /local*"
+    minSize: 1
+    maxSize: 2
+    desiredCapacity: 1
+    additionalVolumes:
+      - volumeName: '/dev/sdf'  #the EBS doesn't exist at this point
+      - volumeName: '/dev/sdg'

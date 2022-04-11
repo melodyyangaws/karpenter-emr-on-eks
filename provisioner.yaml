@@ -1,0 +1,70 @@
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: default
+  namespace: karpenter
+spec:
+  labels:
+    app: spark
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["spot","on-demand"]
+    - key: "kubernetes.io/arch" 
+      operator: In
+      values: ["amd64","arm64"]  
+    # - key: node.kubernetes.io/instance-type
+    #   operator: In
+      # values: ["c5a.8xlarge", "c6a.8xlarge","c6g.8xlarge","c6gn.8xlarge","c5.xlarge","c5a.xlarge","c5d.xlarge","m4.xlarge","m5.xlarge","m6g.xlarge"]  
+    - key: topology.kubernetes.io/zone
+      operator: In
+      values: ["us-east-1a"]  
+
+  limits:
+    resources:
+      cpu: 1000
+      # memory: 1000Gi
+  provider:
+    instanceProfile: KarpenterNodeInstanceProfile-tfc-summit
+    subnetSelector:
+      karpenter.sh/discovery: tfc-summit
+    securityGroupSelector:
+      karpenter.sh/discovery: tfc-summit
+    blockDeviceMappings:
+      - deviceName: /dev/xvda
+        ebs:
+          volumeSize: 200Gi
+          volumeType: gp3
+          # iops: 3000
+          # throughput: 125
+          deleteOnTermination: true
+      - deviceName: /dev/sdf
+        ebs:
+          volumeSize: 80Gi
+          volumeType: gp3
+          # iops: 3000
+          # throughput: 125
+          deleteOnTermination: true      
+      # - deviceName: /dev/sdg
+      #   ebs:
+      #     volumeSize: 80Gi
+      #     volumeType: gp3
+      #     # iops: 3000
+      #     # throughput: 125
+      #     deleteOnTermination: true   
+      # - deviceName: /dev/sdh
+      #   ebs:
+      #     volumeSize: 80Gi
+      #     volumeType: gp3
+      #     # iops: 3000
+      #     # throughput: 125
+      #     deleteOnTermination: true      
+      # - deviceName: /dev/sdi
+      #   ebs:
+      #     volumeSize: 80Gi
+      #     volumeType: gp3
+      #     # iops: 3000
+      #     # throughput: 125
+      #     deleteOnTermination: true   
+            
+  ttlSecondsAfterEmpty: 30
