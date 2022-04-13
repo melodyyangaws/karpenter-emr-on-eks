@@ -20,7 +20,7 @@ cluster=`(echo $clusterName | cut -d- -f1)`
 roleArn=`(aws iam list-roles | grep "eksctl-$cluster" | grep "Arn" | sed 's/ //g' | cut -d'"' -f4)`
 
 echo "Creating ALB Service Account..."
-eksctl create cluster -f - << EOF
+kubectl apply -f - << EOF
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -35,7 +35,7 @@ EOF
 
 echo "Installing the TargetGroupBinding custom resource definitions..."
 
-kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
+kubectl apply -k "github.com/aws/eks-charts/stable/aws-load                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               -balancer-controller//crds?ref=master"
 
 echo "Adding the eks-charts repository..."
 
@@ -49,6 +49,7 @@ helm upgrade -i aws-load-balancer-controller eks/aws-load-balancer-controller \
 --set vpcId=$vpcId \
 --set serviceAccount.create=false \
 --set serviceAccount.name=aws-load-balancer-controller \
+--debug \
 -n kube-system
 
 echo "Verifying the ALB status..."
@@ -60,7 +61,7 @@ echo "Creating a managed endpoint for EMR on EKS..."
 
 openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$region'.compute.internal'
 cp certificateChain.pem trustedCertificates.pem
-export CerticiateARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem)
+export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --output text)
 
 export EMRCLUSTER_NAME=emr-on-$clusterName
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)                    
@@ -73,4 +74,4 @@ aws emr-containers create-managed-endpoint \
 --name emr-eks-endpoint \
 --execution-role-arn $EMR_EKS_EXECUTION_ARN \
 --release-label emr-6.5.0-latest \
---certificate-arn $CerticiateARN
+--certificate-arn $cert_ARN
