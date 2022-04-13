@@ -34,15 +34,12 @@ metadata:
 EOF
 
 echo "Installing the TargetGroupBinding custom resource definitions..."
-
-kubectl apply -k "github.com/aws/eks-charts/stable/aws-load                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               -balancer-controller//crds?ref=master"
+kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
 
 echo "Adding the eks-charts repository..."
-
 helm repo add eks https://aws.github.io/eks-charts
 
 echo "Installing the AWS Load Balancer Controller..."
-
 helm upgrade -i aws-load-balancer-controller eks/aws-load-balancer-controller \
 --set clusterName=$clusterName \
 --set region=$region \
