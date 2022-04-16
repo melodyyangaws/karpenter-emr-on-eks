@@ -1,3 +1,8 @@
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
+# SPDX-License-Identifier: MIT-0
+
 # export EKSCLUSTER_NAME=tfc-summit
 # export AWS_REGION=us-east-1
 
@@ -5,6 +10,29 @@ export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export ROLE_NAME=${EMRCLUSTER_NAME}-execution-role
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
+
+
+echo "==============================================="
+echo "  install CLI tools ......"
+echo "==============================================="
+
+# Install eksctl on cloud9/cloudshell
+curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+sudo mv -v /tmp/eksctl /usr/local/bin
+eksctl version
+
+# Install kubectl on cloud9/cloudshell
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --short --client
+
+
+# Install helm on cloud9/cloudshell
+wget https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz
+tar -xvf helm-v3.6.3-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm
+helm version --short
+
 
 echo "==============================================="
 echo "  setup IAM roles ......"

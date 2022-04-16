@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: MIT-0
 
 # Define params
-# export EKSCLUSTER_NAME=tfc-summit
-# export AWS_REGION=us-east-1
+export EKSCLUSTER_NAME=tfc-summit
+export AWS_REGION=us-east-1
 export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 # export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"

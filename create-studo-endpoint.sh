@@ -1,10 +1,14 @@
-clusterName=tfc-summit
-region=us-east-1
+#!/bin/bash
+
+# SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
+# SPDX-License-Identifier: MIT-0
+
+# clusterName=tfc-summit
+# region=us-east-1
 
 vpcId=`aws eks describe-cluster --name $clusterName --query 'cluster.resourcesVpcConfig.vpcId' --output text`
 
 echo "Creating service account for ALB..."
-
 curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json
 loadBalancerPolicyARN=$(aws iam create-policy --region $region --policy-name EMREKSWorkshop-AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json | jq -r '.Policy.Arn')
 
@@ -60,13 +64,21 @@ echo "Creating a managed endpoint for EMR on EKS..."
 openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$region'.compute.internal'
 cp certificateChain.pem trustedCertificates.pem
 export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --output text)
-# export cert_ARN='arn:aws:acm:us-east-1:633458367150:certificate/0f3e325b-8b40-4288-86fd-3df62c1e2adc'
 
 export EMRCLUSTER_NAME=emr-on-$clusterName
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)                    
 export EMR_EKS_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_EKS_EXECUTION_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
 
+# echo "build docker image"
+# ECR_URL=$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com
+# aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+# aws ecr create-repository --repository-name notebook-spark --image-scanning-configuration scanOnPush=true
+# docker build -t $ECR_URL/notebook-spark:emr-6.5 -f Dockerfile .
+# docker push $ECR_URL/notebook-spark:emr-6.5
+
+
+echo "create emr studio endpoint"
 aws emr-containers create-managed-endpoint \
 --type JUPYTER_ENTERPRISE_GATEWAY \
 --virtual-cluster-id $EMR_EKS_CLUSTER_ID \
@@ -91,7 +103,13 @@ aws emr-containers create-managed-endpoint \
                     {
                         "classification": "python-kubernetes",
                         "properties": {
-                            "container-image": "'$ACCOUNTID'.dkr.ecr.'$region'.amazonaws.com/notebook-python:emr6.5"
+                            "container-image": "public.ecr.aws/myang-poc/notebook-python:6.5"
+                        }
+                    },
+                    {
+                        "classification": "spark-python-kubernetes",
+                        "properties": {
+                            "container-image": "public.ecr.aws/myang-poc/notebook-spark:6.5"
                         }
                     }
                 ]
