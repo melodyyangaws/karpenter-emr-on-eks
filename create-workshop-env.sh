@@ -186,4 +186,4 @@ echo "==============================================="
 echo "  Create a default Karpenter Provisioner ......"
 echo "==============================================="
 
-curl https://raw.githubusercontent.com/melodyyangaws/karpenter-emr-on-eks/main/provisioner.yaml | kubectl apply -f -
+curl https://raw.githubusercontent.com/melodyyangaws/karpenter-emr-on-eks/main/karpenter-provisioner.yaml | kubectl apply -f -

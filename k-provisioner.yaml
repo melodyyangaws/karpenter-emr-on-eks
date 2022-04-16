@@ -1,7 +1,7 @@
 apiVersion: karpenter.sh/v1alpha5
 kind: Provisioner
 metadata:
-  name: sparkjob
+  name: spark
   namespace: karpenter
 spec:
   requirements:
