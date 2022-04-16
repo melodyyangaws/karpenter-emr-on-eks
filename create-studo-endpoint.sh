@@ -1,5 +1,6 @@
 clusterName=tfc-summit
 region=us-east-1
+
 vpcId=`aws eks describe-cluster --name $clusterName --query 'cluster.resourcesVpcConfig.vpcId' --output text`
 
 echo "Creating service account for ALB..."
@@ -59,6 +60,7 @@ echo "Creating a managed endpoint for EMR on EKS..."
 openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$region'.compute.internal'
 cp certificateChain.pem trustedCertificates.pem
 export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --output text)
+# export cert_ARN='arn:aws:acm:us-east-1:633458367150:certificate/0f3e325b-8b40-4288-86fd-3df62c1e2adc'
 
 export EMRCLUSTER_NAME=emr-on-$clusterName
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)                    
@@ -72,3 +74,30 @@ aws emr-containers create-managed-endpoint \
 --execution-role-arn $EMR_EKS_EXECUTION_ARN \
 --release-label emr-6.5.0-latest \
 --certificate-arn $cert_ARN
+
+
+aws emr-containers create-managed-endpoint \
+--type JUPYTER_ENTERPRISE_GATEWAY \
+--virtual-cluster-id $EMR_EKS_CLUSTER_ID \
+--name customPython-emr-eks-endpoint \
+--execution-role-arn $EMR_EKS_EXECUTION_ARN \
+--release-label emr-6.5.0-latest \
+--certificate-arn $cert_ARN \
+--configuration-overrides '{
+   "applicationConfiguration": [
+            {
+                "classification": "jupyter-kernel-overrides",
+                "configurations": [
+                    {
+                        "classification": "python-kubernetes",
+                        "properties": {
+                            "container-image": "'$ACCOUNTID'.dkr.ecr.'$region'.amazonaws.com/notebook-python:emr6.5"
+                        }
+                    }
+                ]
+            }
+        ]
+    }'
+
+
+

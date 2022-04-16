@@ -27,6 +27,8 @@ cat > /tmp/job-execution-policy.json <<EOL
               "arn:aws:s3:::${S3TEST_BUCKET}/*",
               "arn:aws:s3:::*.elasticmapreduce",
               "arn:aws:s3:::*.elasticmapreduce/*",
+              "arn:aws:s3:::nyc-tlc",
+              "arn:aws:s3:::nyc-tlc/*",
               "arn:aws:s3:::blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned/*",
               "arn:aws:s3:::blogpost-sparkoneks-us-east-1"
             ]
@@ -70,6 +72,7 @@ metadata:
   version: "1.21"
   tags:
     karpenter.sh/discovery: ${EKSCLUSTER_NAME}
+    for-use-with-amazon-emr-managed-policies: true
 managedNodeGroups:
   - instanceType: m5.large
     amiFamily: AmazonLinux2
@@ -108,7 +111,7 @@ aws emr-containers create-virtual-cluster --name $EMRCLUSTER_NAME \
     }'
 
 echo "==============================================="
-echo "  Create a Karpenter Provisioner to EKS ......"
+echo "  Install Karpenter to EKS ......"
 echo "==============================================="
 # create node and node instance role
 TEMPOUT=$(mktemp)
@@ -142,7 +145,7 @@ helm repo add karpenter https://charts.karpenter.sh
 helm repo update
 helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
   --create-namespace --version 0.8.1 \
-  --set serviceAccount.create=false \
+  --set serviceAccount.create=true \
   --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${KARPENTER_IAM_ROLE_ARN} \
   --set clusterName=${EKSCLUSTER_NAME} \
   --set clusterEndpoint=$(aws eks describe-cluster --name ${EKSCLUSTER_NAME} --query "cluster.endpoint" --output json) \
@@ -150,18 +153,9 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
   --wait \
   --debug
 
-# Provisioner
-kubectl apply -f provisioner.yaml
 
+echo "==============================================="
+echo "  Create a default Karpenter Provisioner ......"
+echo "==============================================="
 
-# echo "==============================================="
-# echo "  Install Spark-operator to EKS ......"
-# echo "==============================================="
-# # Map s3 bucket into pods
-# kubectl create -n emr configmap special-config --from-literal=codeBucket=$S3TEST_BUCKET
-
-# # Install Spark-Operator for the OSS Spark test
-# helm repo add spark-operator https://googlecloudplatform.github.io/spark-on-k8s-operator
-# helm install -n emr spark-operator spark-operator/spark-operator --version 1.1.6 \
-# --set serviceAccounts.spark.create=false --set metrics.enable=false --set webhook.enable=true --set webhook.port=443 --debug
-
+curl https://raw.githubusercontent.com/melodyyangaws/karpenter-emr-on-eks/main/provisioner.yaml | kubectl apply -f -

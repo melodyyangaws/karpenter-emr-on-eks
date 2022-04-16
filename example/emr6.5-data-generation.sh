@@ -25,9 +25,7 @@ aws emr-containers start-job-run \
       {
         "classification": "spark-defaults", 
         "properties": {
-          "spark.kubernetes.container.image": "'$ECR_URL'/eks-spark-benchmark:emr6.5",
-          "spark.kubernetes.executor.label.app": "spark",
-
+          "spark.kubernetes.container.image": "public.ecr.aws/myang-poc/benchmark:6.5",
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
           "spark.sql.files.maxRecordsPerFile": "30000000",
