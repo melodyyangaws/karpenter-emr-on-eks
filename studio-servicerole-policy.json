@@ -1,0 +1,161 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "elasticmapreduce:ListInstances",
+                "elasticmapreduce:DescribeCluster",
+                "elasticmapreduce:ListSteps"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowEMRReadOnlyActions"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": [
+                "ec2:CreateNetworkInterfacePermission",
+                "ec2:DeleteNetworkInterface"
+            ],
+            "Resource": "arn:aws:ec2:*:*:network-interface/*",
+            "Effect": "Allow",
+            "Sid": "AllowEC2ENIActionsWithEMRTags"
+        },
+        {
+            "Action": "ec2:ModifyNetworkInterfaceAttribute",
+            "Resource": [
+                "arn:aws:ec2:*:*:instance/*",
+                "arn:aws:ec2:*:*:network-interface/*",
+                "arn:aws:ec2:*:*:security-group/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "AllowEC2ENIAttributeAction"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": [
+                "ec2:AuthorizeSecurityGroupEgress",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:RevokeSecurityGroupEgress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:DeleteNetworkInterfacePermission"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowEC2SecurityGroupActionsWithEMRTags"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": "ec2:CreateSecurityGroup",
+            "Resource": "arn:aws:ec2:*:*:security-group/*",
+            "Effect": "Allow",
+            "Sid": "AllowDefaultEC2SecurityGroupsCreationWithEMRTags"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": "ec2:CreateSecurityGroup",
+            "Resource": "arn:aws:ec2:*:*:vpc/*",
+            "Effect": "Allow",
+            "Sid": "AllowDefaultEC2SecurityGroupsCreationInVPCWithEMRTags"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/for-use-with-amazon-emr-managed-policies": "true",
+                    "ec2:CreateAction": "CreateSecurityGroup"
+                }
+            },
+            "Action": "ec2:CreateTags",
+            "Resource": "arn:aws:ec2:*:*:security-group/*",
+            "Effect": "Allow",
+            "Sid": "AllowAddingEMRTagsDuringDefaultSecurityGroupCreation"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:RequestTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": "ec2:CreateNetworkInterface",
+            "Resource": "arn:aws:ec2:*:*:network-interface/*",
+            "Effect": "Allow",
+            "Sid": "AllowEC2ENICreationWithEMRTags"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": "ec2:CreateNetworkInterface",
+            "Resource": [
+                "arn:aws:ec2:*:*:subnet/*",
+                "arn:aws:ec2:*:*:security-group/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "AllowEC2ENICreationInSubnetAndSecurityGroupWithEMRTags"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "ec2:CreateAction": "CreateNetworkInterface"
+                }
+            },
+            "Action": "ec2:CreateTags",
+            "Resource": "arn:aws:ec2:*:*:network-interface/*",
+            "Effect": "Allow",
+            "Sid": "AllowAddingTagsDuringEC2ENICreation"
+        },
+        {
+            "Action": [
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeTags",
+                "ec2:DescribeInstances",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcs"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowEC2ReadOnlyActions"
+        },
+        {
+            "Condition": {
+                "StringEquals": {
+                    "aws:ResourceTag/for-use-with-amazon-emr-managed-policies": "true"
+                }
+            },
+            "Action": "secretsmanager:GetSecretValue",
+            "Resource": "arn:aws:secretsmanager:*:*:secret:*",
+            "Effect": "Allow",
+            "Sid": "AllowSecretsManagerReadOnlyActionsWithEMRTags"
+        },
+        {
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:GetEncryptionConfiguration",
+                "s3:ListBucket",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::*",
+            "Effect": "Allow"
+        }
+    ]
+}

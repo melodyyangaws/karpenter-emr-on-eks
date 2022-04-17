@@ -6,26 +6,26 @@
 # clusterName=tfc-summit
 # region=us-east-1
 
-vpcId=`aws eks describe-cluster --name $clusterName --query 'cluster.resourcesVpcConfig.vpcId' --output text`
+vpcId=$(aws eks describe-cluster --name $clusterName --query 'cluster.resourcesVpcConfig.vpcId' --output text)
 
 echo "Creating service account for ALB..."
 curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json
 loadBalancerPolicyARN=$(aws iam create-policy --region $region --policy-name EMREKSWorkshop-AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json | jq -r '.Policy.Arn')
 
 eksctl create iamserviceaccount \
---cluster=$clusterName \
---namespace=kube-system \
---name=aws-load-balancer-controller \
---attach-policy-arn=$loadBalancerPolicyARN \
---override-existing-serviceaccounts \
---region $region \
---approve
+    --cluster=$clusterName \
+    --namespace=kube-system \
+    --name=aws-load-balancer-controller \
+    --attach-policy-arn=$loadBalancerPolicyARN \
+    --override-existing-serviceaccounts \
+    --region $region \
+    --approve
 
-cluster=`(echo $clusterName | cut -d- -f1)`
-roleArn=`(aws iam list-roles | grep "eksctl-$cluster" | grep "Arn" | sed 's/ //g' | cut -d'"' -f4)`
+cluster=$( (echo $clusterName | cut -d- -f1))
+roleArn=$( (aws iam list-roles | grep "eksctl-$cluster" | grep "Arn" | sed 's/ //g' | cut -d'"' -f4))
 
 echo "Creating ALB Service Account..."
-kubectl apply -f - << EOF
+kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -46,13 +46,13 @@ helm repo add eks https://aws.github.io/eks-charts
 
 echo "Installing the AWS Load Balancer Controller..."
 helm upgrade -i aws-load-balancer-controller eks/aws-load-balancer-controller \
---set clusterName=$clusterName \
---set region=$region \
---set vpcId=$vpcId \
---set serviceAccount.create=false \
---set serviceAccount.name=aws-load-balancer-controller \
---debug \
--n kube-system
+    --set clusterName=$clusterName \
+    --set region=$region \
+    --set vpcId=$vpcId \
+    --set serviceAccount.create=false \
+    --set serviceAccount.name=aws-load-balancer-controller \
+    --debug \
+    -n kube-system
 
 echo "Verifying the ALB status..."
 kubectl get deployment -n kube-system aws-load-balancer-controller
@@ -63,10 +63,10 @@ echo "Creating a managed endpoint for EMR on EKS..."
 
 openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$region'.compute.internal'
 cp certificateChain.pem trustedCertificates.pem
-export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --output text)
+export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --tags Key=ekscluster,Value=$clusterName --output text)
 
 export EMRCLUSTER_NAME=emr-on-$clusterName
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)                    
+export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export EMR_EKS_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_EKS_EXECUTION_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
 
@@ -77,25 +77,23 @@ export EMR_EKS_EXECUTION_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execu
 # docker build -t $ECR_URL/notebook-spark:emr-6.5 -f Dockerfile .
 # docker push $ECR_URL/notebook-spark:emr-6.5
 
-
 echo "create emr studio endpoint"
 aws emr-containers create-managed-endpoint \
---type JUPYTER_ENTERPRISE_GATEWAY \
---virtual-cluster-id $EMR_EKS_CLUSTER_ID \
---name emr-eks-endpoint \
---execution-role-arn $EMR_EKS_EXECUTION_ARN \
---release-label emr-6.5.0-latest \
---certificate-arn $cert_ARN
-
+    --type JUPYTER_ENTERPRISE_GATEWAY \
+    --virtual-cluster-id $EMR_EKS_CLUSTER_ID \
+    --name emr-eks-endpoint \
+    --execution-role-arn $EMR_EKS_EXECUTION_ARN \
+    --release-label emr-6.5.0-latest \
+    --certificate-arn $cert_ARN
 
 aws emr-containers create-managed-endpoint \
---type JUPYTER_ENTERPRISE_GATEWAY \
---virtual-cluster-id $EMR_EKS_CLUSTER_ID \
---name customPython-emr-eks-endpoint \
---execution-role-arn $EMR_EKS_EXECUTION_ARN \
---release-label emr-6.5.0-latest \
---certificate-arn $cert_ARN \
---configuration-overrides '{
+    --type JUPYTER_ENTERPRISE_GATEWAY \
+    --virtual-cluster-id $EMR_EKS_CLUSTER_ID \
+    --name custom-emr-eks-endpoint \
+    --execution-role-arn $EMR_EKS_EXECUTION_ARN \
+    --release-label emr-6.5.0-latest \
+    --certificate-arn $cert_ARN \
+    --configuration-overrides '{
    "applicationConfiguration": [
             {
                 "classification": "jupyter-kernel-overrides",
@@ -116,6 +114,3 @@ aws emr-containers create-managed-endpoint \
             }
         ]
     }'
-
-
-

@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: MIT-0
 
 # Define params
-export EKSCLUSTER_NAME=tfc-summit
-export AWS_REGION=us-east-1
+# export EKSCLUSTER_NAME=tfc-summit
+# export AWS_REGION=us-east-1
 export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 
@@ -22,7 +22,6 @@ aws iam detach-role-policy --role-name $K_ROLE_NAME --policy-arn $K_POLICY_ARN
 aws iam delete-role --role-name $K_ROLE_NAME
 aws iam delete-policy --policy-arn $K_POLICY_ARN
 
-
 # delete EMR virtual cluster & EKS cluster
 export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '${EMRCLUSTER_NAME}' && state == 'RUNNING'].id" --output text)
 aws emr-containers delete-virtual-cluster --id $VIRTUAL_CLUSTER_ID
@@ -32,7 +31,25 @@ export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
 aws s3 rm s3://$S3TEST_BUCKET --recursive
 aws s3api delete-bucket --bucket $S3TEST_BUCKET
 
+# delete ALB
+vpcId=$(aws ec2 describe-vpcs --filters Name=tag:"karpenter.sh/discovery",Values=$EKSCLUSTER_NAME --query "Vpcs[*].VpcId" --output text)
+ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?VpcId=='$vpcId'].LoadBalancerArn" --output text)
+if ! [ -z "$ALB" ]; then
+	for alb in $ALB; do
+		sleep 2
+		echo "Delete $alb"
+		aws elbv2 delete-load-balancer --load-balancer-arn $alb
+	done
+fi
+TG=$(aws elbv2 describe-target-groups --query "TargetGroups[?VpcId=='$vpcId'].TargetGroupArn" --output text)
+if ! [ -z "$TG" ]; then
+	for tg in $TG; do
+		sleep 2
+		echo "Delete Target groups $tg"
+		aws elbv2 delete-target-group --target-group-arn $tg
+	done
+fi
+
+# delete rest of CFN
 aws cloudformation delete-stack --stack-name Karpenter-$EKSCLUSTER_NAME
 eksctl delete cluster --name $EKSCLUSTER_NAME
-
-

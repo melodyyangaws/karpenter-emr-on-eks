@@ -7,10 +7,8 @@
 # export AWS_REGION=us-east-1
 
 export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
-export ROLE_NAME=${EMRCLUSTER_NAME}-execution-role
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
-
 
 echo "==============================================="
 echo "  install CLI tools ......"
@@ -26,24 +24,22 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 kubectl version --short --client
 
-
 # Install helm on cloud9/cloudshell
 wget https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz
 tar -xvf helm-v3.6.3-linux-amd64.tar.gz
 sudo mv linux-amd64/helm /usr/local/bin/helm
 helm version --short
 
-
-echo "==============================================="
-echo "  setup IAM roles ......"
-echo "==============================================="
-
 # create S3 bucket for application
- aws s3 mb s3://$S3TEST_BUCKET --region $AWS_REGION 
- # --create-bucket-configuration LocationConstraint=$AWS_REGION
+aws s3 mb s3://$S3TEST_BUCKET --region $AWS_REGION
+# --create-bucket-configuration LocationConstraint=$AWS_REGION
 
-# Create a job execution role 
-cat > /tmp/job-execution-policy.json <<EOL
+echo "==============================================="
+echo "  setup IAM roles for EMR on EKS ......"
+echo "==============================================="
+# Create a job execution role
+export ROLE_NAME=${EMRCLUSTER_NAME}-execution-role
+cat >/tmp/job-execution-policy.json <<EOL
 {
     "Version": "2012-10-17",
     "Statement": [ 
@@ -70,7 +66,7 @@ cat > /tmp/job-execution-policy.json <<EOL
 }
 EOL
 
-cat > /tmp/trust-policy.json <<EOL
+cat >/tmp/trust-policy.json <<EOL
 {
   "Version": "2012-10-17",
   "Statement": [ {
@@ -86,11 +82,84 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
+echo "  setup IAM roles for EMR Studio ......"
+echo "==============================================="
+
+export STUDIO_SERVICE_ROLE=${EMRCLUSTER_NAME}-StudioServiceRole
+
+cat >/tmp/studio-trust-policy.json <<EOL
+{
+  "Version": "2012-10-17",
+  "Statement": [ {
+      "Effect": "Allow",
+      "Principal": { "Service": "elasticmapreduce.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    } ]
+}
+EOL
+aws iam create-policy --policy-name $STUDIO_SERVICE_ROLE-policy --policy-document file://studio-servicerole-policy.json
+aws iam create-role --role-name $STUDIO_SERVICE_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
+aws iam attach-role-policy --role-name $STUDIO_SERVICE_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_SERVICE_ROLE-policy
+
+export STUDIO_USER_ROLE=${EMRCLUSTER_NAME}-StudioUserRole
+cat >/tmp/studio-userrole-policy.json <<EOL
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:ListSecrets",
+                "emr-containers:DescribeVirtualCluster",
+                "emr-containers:ListVirtualClusters",
+                "emr-containers:DescribeManagedEndpoint",
+                "emr-containers:ListManagedEndpoints",
+                "emr-containers:CreateAccessTokenForManagedEndpoint",
+                "emr-containers:DescribeJobRun",
+                "emr-containers:ListJobRuns"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowBasicActions"
+        },
+        {
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::$ACCOUNTID:role/$STUDIO_SERVICE_ROLE",
+            "Effect": "Allow",
+            "Sid": "PassRolePermission"
+        },
+        {
+            "Action": [
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::*",
+            "Effect": "Allow",
+            "Sid": "S3ListPermission"
+        },
+        {
+            "Action": "s3:GetObject",
+            "Resource": [
+                "arn:aws:s3:::${S3TEST_BUCKET}/*",
+                "arn:aws:s3:::nyc-tlc/*",
+                "arn:aws:s3:::aws-logs-$ACCOUNTID-$AWS_REGION/elasticmapreduce/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3GetObjectPermission"
+        }
+    ]
+}
+EOL
+aws iam create-policy --policy-name $STUDIO_USER_ROLE-policy --policy-document file:///tmp/studio-userrole-policy.json
+aws iam create-role --role-name $STUDIO_USER_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
+aws iam attach-role-policy --role-name $STUDIO_USER_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_USER_ROLE-policy
+
+echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="
 
-
-cat <<EOF | eksctl create cluster -f - 
+cat <<EOF | eksctl create cluster -f -
 ---
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
@@ -143,27 +212,27 @@ echo "  Install Karpenter to EKS ......"
 echo "==============================================="
 # create node and node instance role
 TEMPOUT=$(mktemp)
-curl -fsSL https://karpenter.sh/docs/getting-started/getting-started-with-eksctl/cloudformation.yaml > $TEMPOUT \
-&& aws cloudformation deploy \
-  --stack-name Karpenter-${EKSCLUSTER_NAME} \
-  --template-file ${TEMPOUT} \
-  --capabilities CAPABILITY_NAMED_IAM \
-  --parameter-overrides ClusterName=${EKSCLUSTER_NAME}
+curl -fsSL https://karpenter.sh/docs/getting-started/getting-started-with-eksctl/cloudformation.yaml >$TEMPOUT &&
+    aws cloudformation deploy \
+        --stack-name Karpenter-${EKSCLUSTER_NAME} \
+        --template-file ${TEMPOUT} \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --parameter-overrides ClusterName=${EKSCLUSTER_NAME}
 
 eksctl create iamidentitymapping \
-  --username system:node:{{EC2PrivateDNSName}} \
-  --cluster "${EKSCLUSTER_NAME}" \
-  --arn "arn:aws:iam::${ACCOUNTID}:role/KarpenterNodeRole-${EKSCLUSTER_NAME}" \
-  --group system:bootstrappers \
-  --group system:nodes  
+    --username system:node:{{EC2PrivateDNSName}} \
+    --cluster "${EKSCLUSTER_NAME}" \
+    --arn "arn:aws:iam::${ACCOUNTID}:role/KarpenterNodeRole-${EKSCLUSTER_NAME}" \
+    --group system:bootstrappers \
+    --group system:nodes
 
 # controller role
 eksctl create iamserviceaccount \
-  --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
-  --role-name "${EKSCLUSTER_NAME}-karpenter" \
-  --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
-  --role-only \
-  --approve
+    --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
+    --role-name "${EKSCLUSTER_NAME}-karpenter" \
+    --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
+    --role-only \
+    --approve
 
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
@@ -172,15 +241,14 @@ aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
 helm repo add karpenter https://charts.karpenter.sh
 helm repo update
 helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
-  --create-namespace --version 0.8.1 \
-  --set serviceAccount.create=true \
-  --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${KARPENTER_IAM_ROLE_ARN} \
-  --set clusterName=${EKSCLUSTER_NAME} \
-  --set clusterEndpoint=$(aws eks describe-cluster --name ${EKSCLUSTER_NAME} --query "cluster.endpoint" --output json) \
-  --set aws.defaultInstanceProfile=KarpenterNodeInstanceProfile-${EKSCLUSTER_NAME} \
-  --wait \
-  --debug
-
+    --create-namespace --version 0.8.1 \
+    --set serviceAccount.create=true \
+    --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${KARPENTER_IAM_ROLE_ARN} \
+    --set clusterName=${EKSCLUSTER_NAME} \
+    --set clusterEndpoint=$(aws eks describe-cluster --name ${EKSCLUSTER_NAME} --query "cluster.endpoint" --output json) \
+    --set aws.defaultInstanceProfile=KarpenterNodeInstanceProfile-${EKSCLUSTER_NAME} \
+    --wait \
+    --debug
 
 echo "==============================================="
 echo "  Create a default Karpenter Provisioner ......"
