@@ -19,14 +19,17 @@ export AWS_REGION=us-east-1
 ```
 
 ## Run sample jobs
-To monitor the autoscaling perforamcne, we need two command line windows in the [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Go to "Actions" dropdown list -> select "Split into columns"
+To monitor the autoscaling perforamcne, we need three command line windows in the [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Go to "Actions" dropdown list -> select "Split into rows" twice.
 
 Run the watch command in a window:
 ```bash
 watch "kubectl get po -n emr"
 ```
-
-Submit the samples jobs in a different window:
+Run the command in the 2nd window:
+```bash
+watch "kubectl get no --label-columns=node.kubernetes.io/instance-type,topology.kubernetes.io/zone,karpenter.sh/capacity-type"
+```
+Submit the samples jobs in the 3rd window:
 
 ```bash
 cd karpenter-emr-on-eks
@@ -39,7 +42,7 @@ export AWS_REGION=us-east-1
 ```
 ```bash
 # medium size job with 9 executors
-./emr6.5-benchmark.sh
+./example/emr6.5-benchmark.sh
 ```
 ## Setup EMR studio with EMR on EKS
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
