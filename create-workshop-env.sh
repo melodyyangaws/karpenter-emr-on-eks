@@ -25,15 +25,13 @@ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 echo kubectl version is $(kubectl version --short --client)
 
 # Install helm on cloud9/cloudshell
-wget https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz
-tar -xvf helm-v3.6.3-linux-amd64.tar.gz
-sudo mv linux-amd64/helm /usr/local/bin/helm
-rm -r linux-amd64
+curl -s https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz | tar xz -C ./ &&
+    sudo mv linux-amd64/helm /usr/local/bin/helm &&
+    rm -r linux-amd64
 echo helm cli version is $(helm version --short)
 
 # create S3 bucket for application
 aws s3 mb s3://$S3TEST_BUCKET --region $AWS_REGION
-# --create-bucket-configuration LocationConstraint=$AWS_REGION
 
 echo "==============================================="
 echo "  setup IAM roles for EMR on EKS ......"
@@ -170,7 +168,7 @@ metadata:
   version: "1.21"
   tags:
     karpenter.sh/discovery: ${EKSCLUSTER_NAME}
-    for-use-with-amazon-emr-managed-policies: true
+    for-use-with-amazon-emr-managed-policies: "true"
 managedNodeGroups:
   - instanceType: m5.large
     amiFamily: AmazonLinux2
@@ -189,7 +187,7 @@ cloudWatch:
  clusterLogging:
    enableTypes: ["*"]
 EOF
-# eksctl create cluster -f k-eksctl-cluster.yaml
+# eksctl create cluster -f eksctl-cluster.yaml
 aws eks update-kubeconfig --name $EKSCLUSTER_NAME --region $AWS_REGION
 
 echo "==============================================="
@@ -252,7 +250,8 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
     --debug
 
 echo "==============================================="
-echo "  Create a default Karpenter Provisioner ......"
+echo "Create a Karpenter Provisioner for Spark ......"
 echo "==============================================="
-
-curl https://raw.githubusercontent.com/melodyyangaws/karpenter-emr-on-eks/main/k-provisioner.yaml | kubectl apply -f -
+sed -i 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
+sed -i 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
+kubectl apply -f k-provisioner.yaml
