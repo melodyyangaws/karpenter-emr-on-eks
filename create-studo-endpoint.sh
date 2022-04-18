@@ -87,18 +87,15 @@ echo "==============================================="
 echo "  Creating service account for ALB... ......"
 echo "==============================================="
 vpcId=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query 'cluster.resourcesVpcConfig.vpcId' --output text)
-
 curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json
-loadBalancerPolicyARN=$(aws iam create-policy --region $AWS_REGION --policy-name $EKSCLUSTER_NAME-AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json | jq -r '.Policy.Arn')
+aws iam create-policy --region $AWS_REGION --policy-name $EKSCLUSTER_NAME-studio-alb-policy --policy-document file://iam_policy.json
 
 eksctl create iamserviceaccount --cluster $EKSCLUSTER_NAME --namespace kube-system --name aws-load-balancer-controller \
-    --attach-policy-arn $loadBalancerPolicyARN \
+    --role-name "${EKSCLUSTER_NAME}-studio-alb" \
+    --attach-policy-arn "arn:aws:iam::$ACCOUNTID:policy/$EKSCLUSTER_NAME-studio-alb-policy" \
     --override-existing-serviceaccounts \
     --region $AWS_REGION \
     --approve
-
-cluster=$( (echo $EKSCLUSTER_NAME | cut -d- -f1))
-roleArn=$( (aws iam list-roles | grep "eksctl-$cluster" | grep "Arn" | sed 's/ //g' | cut -d'"' -f4))
 
 echo "Creating ALB Service Account..."
 kubectl apply -f - <<EOF
@@ -111,7 +108,7 @@ metadata:
     name: aws-load-balancer-controller
     namespace: kube-system
     annotations:
-        eks.amazonaws.com/role-arn: $roleArn
+        eks.amazonaws.com/role-arn: "arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-studio-alb"
 EOF
 
 echo "Installing the TargetGroupBinding custom resource definitions..."

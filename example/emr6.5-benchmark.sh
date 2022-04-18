@@ -28,8 +28,8 @@ aws emr-containers start-job-run \
           "spark.executor.heartbeatInterval": "300s",
           "spark.driver.memoryOverhead": "1G",
           "spark.executor.memoryOverhead": "2G",
-          "spark.kubernetes.executor.podNamePrefix": "tpcds"
-          "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70"
+          "spark.kubernetes.executor.podNamePrefix": "tpcds",
+          "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
 
           "spark.ui.prometheus.enabled":"true",
           "spark.executor.processTreeMetrics.enabled":"true",

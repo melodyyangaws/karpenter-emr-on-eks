@@ -20,6 +20,8 @@ aws emr-containers start-job-run \
         "classification": "spark-defaults",
         "properties": {
         "spark.ui.prometheus.enabled":"true",
+        "spark.eventLog.logStageExecutorMetrics":"true",
+
         "spark.executor.processTreeMetrics.enabled":"true",
         "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",
         "spark.kubernetes.driver.annotation.prometheus.io/path":"/metrics/executors/prometheus/",
