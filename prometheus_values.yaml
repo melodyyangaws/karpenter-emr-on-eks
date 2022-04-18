@@ -1,0 +1,14 @@
+serviceAccounts:
+  server:
+    name: amp-iamproxy-ingest-service-account
+    annotations: 
+      eks.amazonaws.com/role-arn: arn:aws:iam::021732063925:role/tfc-summit-prometheus-ingest
+server:
+  remoteWrite:
+    - url: https://aps-workspaces.us-west-2.amazonaws.com/workspaces/ws-ad1be52b-6ead-44ed-9083-8765c83bbfb8/api/v1/remote_write
+      sigv4:
+        region: us-west-2
+      queue_config:
+        max_samples_per_send: 1000
+        max_shards: 200
+        capacity: 2500

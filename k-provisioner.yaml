@@ -13,10 +13,10 @@ spec:
       values: ["amd64"]
     # - key: "node.kubernetes.io/instance-type"
     #   operator: In
-      # values: ["c5a.8xlarge", "c6a.8xlarge","c6g.8xlarge","c6gn.8xlarge","c5.xlarge","c5a.xlarge","c5d.xlarge","m4.xlarge","m5.xlarge","m6g.xlarge"]  
+    #   values: ["c5a.8xlarge", "c6a.8xlarge","c6g.8xlarge","c6a.24xlarge","c6.24xlarge","c5.2xlarge","c5.xlarge","c5a.xlarge","c5d.xlarge","m4.xlarge","m5.xlarge","m6g.xlarge","m5.large","t3.medium"]  
     - key: "topology.kubernetes.io/zone"
       operator: In
-      values: ["{AWS_REGION}a"]  
+      values: ["{AWS_REGION}a"]
 
   limits:
     resources:

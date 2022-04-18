@@ -48,8 +48,8 @@ export AWS_REGION=us-east-1
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
 
 ```bash
-clusterName=tfc-summit
-region=us-east-1
+export EKSCLUSTER_NAME=tfc-summit
+export AWS_REGION=us-east-1
 sudo yum install -y openssl
 ./create-studio-endpoint.sh
 ````

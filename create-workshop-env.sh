@@ -81,78 +81,43 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
-echo "  setup IAM roles for EMR Studio ......"
+echo "  setup IAM roles for Prometheus ......"
 echo "==============================================="
-
-export STUDIO_SERVICE_ROLE=${EMRCLUSTER_NAME}-StudioServiceRole
-
-cat >/tmp/studio-trust-policy.json <<EOL
+# grants ingest (remote write) permissions for all AMP workspaces
+cat <<EOF >/tmp/prometheus-ingest-policy.json
 {
   "Version": "2012-10-17",
-  "Statement": [ {
-      "Effect": "Allow",
-      "Principal": { "Service": "elasticmapreduce.amazonaws.com" },
-      "Action": "sts:AssumeRole"
-    } ]
+   "Statement": [
+       {"Effect": "Allow",
+        "Action": [
+           "aps:RemoteWrite", 
+           "aps:GetSeries", 
+           "aps:GetLabels",
+           "aps:GetMetricMetadata"
+        ], 
+        "Resource": "*"
+      }
+   ]
 }
-EOL
-aws iam create-policy --policy-name $STUDIO_SERVICE_ROLE-policy --policy-document file://studio-servicerole-policy.json
-aws iam create-role --role-name $STUDIO_SERVICE_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
-aws iam attach-role-policy --role-name $STUDIO_SERVICE_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_SERVICE_ROLE-policy
-
-export STUDIO_USER_ROLE=${EMRCLUSTER_NAME}-StudioUserRole
-cat >/tmp/studio-userrole-policy.json <<EOL
+EOF
+cat <<EOF >/tmp/prometheus-query-policy.json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": [
-                "secretsmanager:CreateSecret",
-                "secretsmanager:ListSecrets",
-                "emr-containers:DescribeVirtualCluster",
-                "emr-containers:ListVirtualClusters",
-                "emr-containers:DescribeManagedEndpoint",
-                "emr-containers:ListManagedEndpoints",
-                "emr-containers:CreateAccessTokenForManagedEndpoint",
-                "emr-containers:DescribeJobRun",
-                "emr-containers:ListJobRuns"
-            ],
-            "Resource": "*",
-            "Effect": "Allow",
-            "Sid": "AllowBasicActions"
-        },
-        {
-            "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::$ACCOUNTID:role/$STUDIO_SERVICE_ROLE",
-            "Effect": "Allow",
-            "Sid": "PassRolePermission"
-        },
-        {
-            "Action": [
-                "s3:ListAllMyBuckets",
-                "s3:ListBucket",
-                "s3:GetBucketLocation"
-            ],
-            "Resource": "arn:aws:s3:::*",
-            "Effect": "Allow",
-            "Sid": "S3ListPermission"
-        },
-        {
-            "Action": "s3:GetObject",
-            "Resource": [
-                "arn:aws:s3:::${S3TEST_BUCKET}/*",
-                "arn:aws:s3:::nyc-tlc/*",
-                "arn:aws:s3:::aws-logs-$ACCOUNTID-$AWS_REGION/elasticmapreduce/*"
-            ],
-            "Effect": "Allow",
-            "Sid": "S3GetObjectPermission"
-        }
-    ]
+  "Version": "2012-10-17",
+   "Statement": [
+       {"Effect": "Allow",
+        "Action": [
+           "aps:QueryMetrics",
+           "aps:GetSeries", 
+           "aps:GetLabels",
+           "aps:GetMetricMetadata"
+        ], 
+        "Resource": "*"
+      }
+   ]
 }
-EOL
-aws iam create-policy --policy-name $STUDIO_USER_ROLE-policy --policy-document file:///tmp/studio-userrole-policy.json
-aws iam create-role --role-name $STUDIO_USER_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
-aws iam attach-role-policy --role-name $STUDIO_USER_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_USER_ROLE-policy
+EOF
+aws iam create-policy --policy-name prometheus-ingest-policy --policy-document file:///tmp/prometheus-ingest-policy.json
+aws iam create-policy --policy-name prometheus-query-policy --policy-document file:///tmp/prometheus-query-policy.json
 
 echo "==============================================="
 echo "  Create EKS Cluster ......"
@@ -206,6 +171,34 @@ aws emr-containers create-virtual-cluster --name $EMRCLUSTER_NAME \
         "info": { "eksInfo": { "namespace":"'emr'" } }
     }'
 
+echo "====================================================="
+echo "  Install Managed Prometheus for monitroing ......"
+echo "====================================================="
+kubectl create namespace prometheus
+
+eksctl create iamserviceaccount \
+    --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
+    --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
+    --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/prometheus-ingest-policy" \
+    --approve
+
+eksctl create iamserviceaccount \
+    --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-query-service-account \
+    --role-name "${EKSCLUSTER_NAME}-prometheus-query" \
+    --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/prometheus-query-policy" \
+    --approve
+
+export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
+export PROMETHEUS_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
+helm repo update
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' prometheus_values.yaml
+sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' prometheus_values.yaml
+sed -i -- 's/{IAM_PROXY_PROMETHEUS_ROLE_ARN}/'$PROMETHEUS_ROLE_ARN'/g' prometheus_values.yaml
+helm install prometheus prometheus-community/prometheus -n prometheus -f prometheus_values.yaml --debug
+
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"
 echo "==============================================="
@@ -252,6 +245,6 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
 echo "==============================================="
 echo "Create a Karpenter Provisioner for Spark ......"
 echo "==============================================="
-sed -i 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
-sed -i 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
 kubectl apply -f k-provisioner.yaml

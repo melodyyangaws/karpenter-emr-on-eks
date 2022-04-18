@@ -3,25 +3,101 @@
 # SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
 # SPDX-License-Identifier: MIT-0
 
-# clusterName=tfc-summit
-# region=us-east-1
+# EKSCLUSTER_NAME=tfc-summit
+# AWS_REGION=us-east-1
 
-vpcId=$(aws eks describe-cluster --name $clusterName --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+echo "==============================================="
+echo "  setup IAM roles for EMR Studio ......"
+echo "==============================================="
 
-echo "Creating service account for ALB..."
+export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
+export STUDIO_SERVICE_ROLE=${EMRCLUSTER_NAME}-StudioServiceRole
+export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
+export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
+
+cat >/tmp/studio-trust-policy.json <<EOL
+{
+  "Version": "2012-10-17",
+  "Statement": [ {
+      "Effect": "Allow",
+      "Principal": { "Service": "elasticmapreduce.amazonaws.com" },
+      "Action": "sts:AssumeRole"
+    } ]
+}
+EOL
+aws iam create-policy --policy-name $STUDIO_SERVICE_ROLE-policy --policy-document file://studio-servicerole-policy.json
+aws iam create-role --role-name $STUDIO_SERVICE_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
+aws iam attach-role-policy --role-name $STUDIO_SERVICE_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_SERVICE_ROLE-policy
+
+export STUDIO_USER_ROLE=${EMRCLUSTER_NAME}-StudioUserRole
+cat >/tmp/studio-userrole-policy.json <<EOL
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "secretsmanager:CreateSecret",
+                "secretsmanager:ListSecrets",
+                "emr-containers:DescribeVirtualCluster",
+                "emr-containers:ListVirtualClusters",
+                "emr-containers:DescribeManagedEndpoint",
+                "emr-containers:ListManagedEndpoints",
+                "emr-containers:CreateAccessTokenForManagedEndpoint",
+                "emr-containers:DescribeJobRun",
+                "emr-containers:ListJobRuns"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowBasicActions"
+        },
+        {
+            "Action": "iam:PassRole",
+            "Resource": "arn:aws:iam::$ACCOUNTID:role/$STUDIO_SERVICE_ROLE",
+            "Effect": "Allow",
+            "Sid": "PassRolePermission"
+        },
+        {
+            "Action": [
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::*",
+            "Effect": "Allow",
+            "Sid": "S3ListPermission"
+        },
+        {
+            "Action": "s3:GetObject",
+            "Resource": [
+                "arn:aws:s3:::${S3TEST_BUCKET}/*",
+                "arn:aws:s3:::nyc-tlc/*",
+                "arn:aws:s3:::aws-logs-$ACCOUNTID-$AWS_REGION/elasticmapreduce/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3GetObjectPermission"
+        }
+    ]
+}
+EOL
+aws iam create-policy --policy-name $STUDIO_USER_ROLE-policy --policy-document file:///tmp/studio-userrole-policy.json
+aws iam create-role --role-name $STUDIO_USER_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
+aws iam attach-role-policy --role-name $STUDIO_USER_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_USER_ROLE-policy
+
+echo "==============================================="
+echo "  Creating service account for ALB... ......"
+echo "==============================================="
+vpcId=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query 'cluster.resourcesVpcConfig.vpcId' --output text)
+
 curl -o iam_policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.2.0/docs/install/iam_policy.json
-loadBalancerPolicyARN=$(aws iam create-policy --region $region --policy-name EMREKSWorkshop-AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json | jq -r '.Policy.Arn')
+loadBalancerPolicyARN=$(aws iam create-policy --region $AWS_REGION --policy-name $EKSCLUSTER_NAME-AWSLoadBalancerControllerIAMPolicy --policy-document file://iam_policy.json | jq -r '.Policy.Arn')
 
-eksctl create iamserviceaccount \
-    --cluster=$clusterName \
-    --namespace=kube-system \
-    --name=aws-load-balancer-controller \
-    --attach-policy-arn=$loadBalancerPolicyARN \
+eksctl create iamserviceaccount --cluster $EKSCLUSTER_NAME --namespace kube-system --name aws-load-balancer-controller \
+    --attach-policy-arn $loadBalancerPolicyARN \
     --override-existing-serviceaccounts \
-    --region $region \
+    --region $AWS_REGION \
     --approve
 
-cluster=$( (echo $clusterName | cut -d- -f1))
+cluster=$( (echo $EKSCLUSTER_NAME | cut -d- -f1))
 roleArn=$( (aws iam list-roles | grep "eksctl-$cluster" | grep "Arn" | sed 's/ //g' | cut -d'"' -f4))
 
 echo "Creating ALB Service Account..."
@@ -46,8 +122,8 @@ helm repo add eks https://aws.github.io/eks-charts
 
 echo "Installing the AWS Load Balancer Controller..."
 helm upgrade -i aws-load-balancer-controller eks/aws-load-balancer-controller \
-    --set clusterName=$clusterName \
-    --set region=$region \
+    --set clusterName=$EKSCLUSTER_NAME \
+    --set region=$AWS_REGION \
     --set vpcId=$vpcId \
     --set serviceAccount.create=false \
     --set serviceAccount.name=aws-load-balancer-controller \
@@ -61,21 +137,12 @@ echo "Load balancer controller has been installed successfully."
 
 echo "Creating a managed endpoint for EMR on EKS..."
 
-openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$region'.compute.internal'
+openssl req -x509 -newkey rsa:1024 -keyout privateKey.pem -out certificateChain.pem -days 365 -nodes -subj '/C=US/ST=Washington/L=Seattle/O=MyOrg/OU=MyDept/CN=*.'$AWS_REGION'.compute.internal'
 cp certificateChain.pem trustedCertificates.pem
-export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --tags Key=ekscluster,Value=$clusterName --output text)
+export cert_ARN=$(aws acm import-certificate --certificate fileb://trustedCertificates.pem --certificate-chain fileb://certificateChain.pem --private-key fileb://privateKey.pem --tags Key=ekscluster,Value=$EKSCLUSTER_NAME --output text)
 
-export EMRCLUSTER_NAME=emr-on-$clusterName
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export EMR_EKS_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_EKS_EXECUTION_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
-
-# echo "build docker image"
-# ECR_URL=$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com
-# aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
-# aws ecr create-repository --repository-name notebook-spark --image-scanning-configuration scanOnPush=true
-# docker build -t $ECR_URL/notebook-spark:emr-6.5 -f Dockerfile .
-# docker push $ECR_URL/notebook-spark:emr-6.5
 
 echo "create emr studio endpoint"
 aws emr-containers create-managed-endpoint \
