@@ -32,7 +32,9 @@ aws emr-containers start-job-run \
         "spark.metrics.conf.*.sink.prometheusServlet.class":"org.apache.spark.metrics.sink.PrometheusServlet",
         "spark.metrics.conf.*.sink.prometheusServlet.path":"/metrics/driver/prometheus/",
         "spark.metrics.conf.master.sink.prometheusServlet.path":"/metrics/master/prometheus/",
-        "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/"
+        "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/",
+
+        "spark.metrics.conf":"/spark/conf/metric.properties"
         }
     }]
   }'

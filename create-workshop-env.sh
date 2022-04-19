@@ -81,29 +81,6 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
-echo "  setup IAM roles for Prometheus ......"
-echo "==============================================="
-# # grants ingest (remote write) permissions for all AMP workspaces
-# cat <<EOF >/tmp/prometheus-ingest-policy.json
-# {
-#   "Version": "2012-10-17",
-#    "Statement": [
-#        {"Effect": "Allow",
-#         "Action": [
-#            "aps:RemoteWrite",
-#            "aps:GetSeries",
-#            "aps:GetLabels",
-#            "aps:GetMetricMetadata"
-#         ],
-#         "Resource": "*"
-#       }
-#    ]
-# }
-# EOF
-
-# aws iam create-policy --policy-name prometheus-ingest-policy --policy-document file:///tmp/prometheus-ingest-policy.json
-
-echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="
 
@@ -167,21 +144,16 @@ eksctl create iamserviceaccount \
     --role-only \
     --approve
 
-# eksctl create iamserviceaccount \
-#     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-query-service-account \
-#     --role-name "${EKSCLUSTER_NAME}-prometheus-query" \
-#     --attach-policy-arn "arn:aws:iam::aws:policy/AmazonPrometheusQueryAccess" \
-#     --approve
-
-export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
+export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
 export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
 helm repo update
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' prometheus_values.yaml
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' prometheus_values.yaml
 sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' prometheus_values.yaml
-sed -i -- 's/{IAM_PROXY_PROMETHEUS_ROLE_ARN}/'$INGEST_ROLE_ARN'/g' prometheus_values.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' prometheus_values.yaml
 helm install prometheus prometheus-community/prometheus -n prometheus -f prometheus_values.yaml --debug
 
 echo "==============================================="
