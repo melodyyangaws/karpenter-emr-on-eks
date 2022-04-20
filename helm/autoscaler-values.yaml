@@ -1,0 +1,17 @@
+autoDiscovery:
+    clusterName: {EKSCLUSTER_NAME}
+awsRegion: {AWS_REGION}
+image:
+    tag: v1.21.1
+nodeSelector:
+    app: caspark
+podAnnotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
+extraArgs:
+    skip-nodes-with-system-pods: false
+    scale-down-unneeded-time: 30s
+    scale-down-unready-time: 1m
+rbac:
+    serviceAccount:
+        create: false
+        name: cluster-autoscaler

@@ -1,0 +1,61 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: {EKSCLUSTER_NAME}
+  region: {AWS_REGION}
+  version: "1.21"
+  tags:
+    karpenter.sh/discovery: {EKSCLUSTER_NAME}
+    for-use-with-amazon-emr-managed-policies: "true"
+vpc:
+  clusterEndpoints:
+      publicAccess: true
+      privateAccess: true  
+availabilityZones: ["{AWS_REGION}a","{AWS_REGION}b"]
+# IRSA setup
+iam:
+  withOIDC: true
+  serviceAccounts:
+  - metadata:
+      name: cluster-autoscaler
+      namespace: kube-system
+      labels: {aws-usage: "application"}
+    wellKnownPolicies:
+      autoScaler: true
+    roleName: eksctl-cluster-autoscaler-role
+  - metadata:
+      name: amp-iamproxy-ingest-service-account
+      namespace: prometheus
+      labels: {aws-usage: "monitoring"}
+    attachPolicyARNs: "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+    roleName: {EKSCLUSTER_NAME}-prometheus-ingest 
+    roleOnly: true
+  - metadata:
+      name: karpenter
+      namespace: karpenter
+      labels: {aws-usage: "monitoring"}
+    attachPolicyARNs: "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
+    roleName: {EKSCLUSTER_NAME}-karpenter
+    roleOnly: true
+    
+managedNodeGroups:
+  - name: {EKSCLUSTER_NAME}-ng
+    instanceType: c5.9xlarge
+    availabilityZones: [${AWS_REGION}b"] 
+    preBootstrapCommands:
+      - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
+      - "sudo mount -a"
+      - "sudo chown ec2-user:ec2-user /local1"
+    volumeSize: 20
+    minSize: 1
+    desiredCapacity: 1
+    maxSize: 30
+    labels:
+      app: caspark
+    tags:
+      # required for cluster-autoscaler auto-discovery
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/$EKSCLUSTER_NAME: "owned"
+cloudWatch: 
+ clusterLogging:
+   enableTypes: ["*"]

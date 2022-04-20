@@ -81,7 +81,7 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
-echo "  Create Grafana Role ......"
+echo "  Create Grafana Role and workspace ......"
 echo "==============================================="
 
 export GRA_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
@@ -137,54 +137,91 @@ aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authenticat
 echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="
-
-eksctl create cluster -f - <<EOF
----
-apiVersion: eksctl.io/v1alpha5
-kind: ClusterConfig
-metadata:
-  name: ${EKSCLUSTER_NAME}
-  region: ${AWS_REGION}
-  version: "1.21"
-  tags:
-    karpenter.sh/discovery: ${EKSCLUSTER_NAME}
-    for-use-with-amazon-emr-managed-policies: "true"
-vpc:
-  clusterEndpoints:
-      publicAccess: true
-      privateAccess: true  
-availabilityZones: ["${AWS_REGION}a","${AWS_REGION}b"]
-iam:
-  withOIDC: true    
-managedNodeGroups:
-  - name: ${EKSCLUSTER_NAME}-ng
-    instanceType: c5.9xlarge
-    availabilityZones: ["${AWS_REGION}b"] 
-    preBootstrapCommands:
-      - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
-      - "sudo mount -a"
-      - "sudo chown ec2-user:ec2-user /local1"
-    volumeSize: 20
-    minSize: 1
-    desiredCapacity: 1
-    maxSize: 30
-    labels:
-      app: caspark
-    tags:
-      # required for cluster-autoscaler auto-discovery
-      k8s.io/cluster-autoscaler/enabled: "true"
-      k8s.io/cluster-autoscaler/$EKSCLUSTER_NAME: "owned"
-cloudWatch: 
- clusterLogging:
-   enableTypes: ["*"]
-EOF
-# eksctl create cluster -f eksctl-cluster.yaml
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' ekscluster-config.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' ekscluster-config.yaml
+eksctl create cluster -f ekscluster-config.yaml
 aws eks update-kubeconfig --name $EKSCLUSTER_NAME --region $AWS_REGION
+
+echo "==============================================="
+echo "  Install Cluster Autoscaler (CA) to EKS ......"
+echo "==============================================="
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/autoscaler-values.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/autoscaler-values.yaml
+helm repo add autoscaler https://kubernetes.github.io/autoscaler
+helm install nodescaler autoscaler/cluster-autoscaler -n kube-system -f helm/autoscaler-values.yaml --debug
+
+echo "====================================================="
+echo "  Install Prometheus to EKS for monitroing ......"
+echo "====================================================="
+# kubectl create namespace prometheus
+# eksctl create iamserviceaccount \
+#     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
+#     --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
+#     --attach-policy-arn "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess" \
+#     --role-only \
+#     --approve
+
+export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
+export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
+helm repo update
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
+sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
+helm install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
+
+echo "==============================================="
+echo "  Install Karpenter to EKS ......"
+echo "==============================================="
+# create IAM role and launch template
+CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
+DNS_IP=$(kubectl get svc -n kube-system | grep kube-dns | awk '{print $3}')
+API_SERVER=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.endpoint' --output text)
+B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text)
+
+aws cloudformation deploy \
+    --stack-name Karpenter-${EKSCLUSTER_NAME} \
+    --template-file file://$(pwd)/karpaenter-cfn.yaml \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
+
+eksctl create iamidentitymapping \
+    --username system:node:{{EC2PrivateDNSName}} \
+    --cluster "${EKSCLUSTER_NAME}" \
+    --arn "arn:aws:iam::${ACCOUNTID}:role/KarpenterNodeRole-${EKSCLUSTER_NAME}" \
+    --group system:bootstrappers \
+    --group system:nodes
+
+# # controller role
+# eksctl create iamserviceaccount \
+#     --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
+#     --role-name "${EKSCLUSTER_NAME}-karpenter" \
+#     --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
+#     --role-only \
+#     --approve
+
+export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
+# aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
+
+helm repo add karpenter https://charts.karpenter.sh
+helm repo update
+helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.8.1 \
+    --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER} \
+    --debug
+
+echo "==============================================="
+echo "Create a Karpenter Provisioner for Spark ......"
+echo "==============================================="
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
+kubectl apply -f k-provisioner.yaml
 
 echo "==============================================="
 echo "  Enable EMR on EKS ......"
 echo "==============================================="
-
 kubectl create namespace emr
 eksctl create iamidentitymapping --cluster $EKSCLUSTER_NAME --namespace emr --service-name "emr-containers"
 aws emr-containers update-role-trust-policy --cluster-name $EKSCLUSTER_NAME --namespace emr --role-name $ROLE_NAME
@@ -196,80 +233,6 @@ aws emr-containers create-virtual-cluster --name $EMRCLUSTER_NAME \
         "type": "EKS",
         "info": { "eksInfo": { "namespace":"'emr'" } }
     }'
-
-echo "====================================================="
-echo "  Install Managed Prometheus for monitroing ......"
-echo "====================================================="
-kubectl create namespace prometheus
-
-eksctl create iamserviceaccount \
-    --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
-    --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
-    --attach-policy-arn "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess" \
-    --role-only \
-    --approve
-
-export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
-export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
-
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
-helm repo update
-sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' prometheus_values.yaml
-sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' prometheus_values.yaml
-sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' prometheus_values.yaml
-sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' prometheus_values.yaml
-helm install prometheus prometheus-community/prometheus -n prometheus -f prometheus_values.yaml --debug
-
-echo "==============================================="
-echo "  Install Karpenter to EKS ......"
-echo "==============================================="
-# create IAM role and launch template
-CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
-aws cloudformation deploy \
-    --stack-name Karpenter-${EKSCLUSTER_NAME} \
-    --template-file file://$(pwd)/karpaenter-cfn.yaml \
-    --capabilities CAPABILITY_NAMED_IAM \
-    --parameter-overrides "ClusterName=${EKSCLUSTER_NAME}" "EKSClusterSgId=${CONTROLPLANE_SG}"
-
-eksctl create iamidentitymapping \
-    --username system:node:{{EC2PrivateDNSName}} \
-    --cluster "${EKSCLUSTER_NAME}" \
-    --arn "arn:aws:iam::${ACCOUNTID}:role/KarpenterNodeRole-${EKSCLUSTER_NAME}" \
-    --group system:bootstrappers \
-    --group system:nodes
-
-# controller role
-eksctl create iamserviceaccount \
-    --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
-    --role-name "${EKSCLUSTER_NAME}-karpenter" \
-    --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
-    --role-only \
-    --approve
-
-export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
-# aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
-
-# Install
-helm repo add karpenter https://charts.karpenter.sh
-helm repo update
-helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
-    --create-namespace --version 0.8.1 \
-    --set serviceAccount.create=true \
-    --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${KARPENTER_IAM_ROLE_ARN} \
-    --set clusterName=${EKSCLUSTER_NAME} \
-    --set clusterEndpoint=$(aws eks describe-cluster --name ${EKSCLUSTER_NAME} --query "cluster.endpoint" --output json) \
-    --set hostNetwork=true \
-    --set defaultProvisioner.create=false \
-    --wait \
-    --debug # --set aws.defaultInstanceProfile=KarpenterNodeInstanceProfile-${EKSCLUSTER_NAME} \
-
-echo "==============================================="
-echo "Create a Karpenter Provisioner for Spark ......"
-echo "==============================================="
-sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
-sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
-kubectl apply -f k-provisioner.yaml
 
 echo "============================================================================="
 echo "  Create ECR for benchmark utility docker image ......"

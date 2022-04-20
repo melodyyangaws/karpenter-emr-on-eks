@@ -2,7 +2,7 @@ serviceAccounts:
   server:
     name: amp-iamproxy-ingest-service-account
     annotations: 
-      eks.amazonaws.com/role-arn: arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest
+      eks.amazonaws.com/role-arn: arn:aws:iam::{ACCOUNTID}:role/{EKSCLUSTER_NAME}-prometheus-ingest
 server:
   remoteWrite:
     - url: https://aps-workspaces.{AWS_REGION}.amazonaws.com/workspaces/{WORKSPACE_ID}/api/v1/remote_write
