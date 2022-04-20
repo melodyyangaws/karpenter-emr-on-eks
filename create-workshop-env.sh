@@ -3,9 +3,9 @@
 # SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
 # SPDX-License-Identifier: MIT-0
 
-# export EKSCLUSTER_NAME=tfc-summit
-# export AWS_REGION=us-east-1
+AWS_REGION=$1
 
+export EKSCLUSTER_NAME=tfc-summit
 export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}

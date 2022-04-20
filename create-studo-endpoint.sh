@@ -3,8 +3,8 @@
 # SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
 # SPDX-License-Identifier: MIT-0
 
-# EKSCLUSTER_NAME=tfc-summit
-# AWS_REGION=us-east-1
+AWS_REGION=$1
+export EKSCLUSTER_NAME=tfc-summit
 
 echo "==============================================="
 echo "  setup IAM roles for EMR Studio ......"

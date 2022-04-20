@@ -1,3 +1,6 @@
+AWS_REGION=$1
+
+export EMRCLUSTER_NAME=emr-on-tfc-summit
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_ROLE_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
@@ -20,7 +23,7 @@ aws emr-containers start-job-run \
         "classification": "spark-defaults",
         "properties": {
           "spark.kubernetes.node.selector.app": "kspark",
-          
+
           "spark.ui.prometheus.enabled":"true",
           "spark.executor.processTreeMetrics.enabled":"true",
           "spark.kubernetes.driver.annotation.prometheus.io/scrape":"true",
