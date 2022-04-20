@@ -187,7 +187,7 @@ B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAM
 
 aws cloudformation deploy \
     --stack-name Karpenter-${EKSCLUSTER_NAME} \
-    --template-file file://$(pwd)/karpaenter-cfn.yaml \
+    --template-file file://$(pwd)/karpenter-cfn.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
 
