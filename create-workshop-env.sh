@@ -140,6 +140,8 @@ echo "  Create EKS Cluster ......"
 echo "==============================================="
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' ekscluster-config.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' ekscluster-config.yaml
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' ekscluster-config.yaml
+
 eksctl create cluster -f ekscluster-config.yaml
 aws eks update-kubeconfig --name $EKSCLUSTER_NAME --region $AWS_REGION
 
