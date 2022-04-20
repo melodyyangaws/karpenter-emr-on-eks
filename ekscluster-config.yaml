@@ -27,14 +27,14 @@ iam:
       name: amp-iamproxy-ingest-service-account
       namespace: prometheus
       labels: {aws-usage: "monitoring"}
-    attachPolicyARNs: "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+    attachPolicyARN: "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
     roleName: {EKSCLUSTER_NAME}-prometheus-ingest 
     roleOnly: true
   - metadata:
       name: karpenter
       namespace: karpenter
       labels: {aws-usage: "monitoring"}
-    attachPolicyARNs: "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
+    attachPolicyARN: "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
     roleName: {EKSCLUSTER_NAME}-karpenter
     roleOnly: true
     
