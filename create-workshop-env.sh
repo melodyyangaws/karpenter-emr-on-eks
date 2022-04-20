@@ -81,6 +81,60 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
+echo "  Create Grafana Role ......"
+echo "==============================================="
+
+export GRA_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
+cat >/tmp/grafana-prometheus-policy.json <<EOL
+{
+    "Version": "2012-10-17",
+    "Statement": [ 
+          {
+            "Effect": "Allow",
+            "Action": [
+                "aps:ListWorkspaces",
+                "aps:DescribeWorkspace",
+                "aps:QueryMetrics",
+                "aps:GetLabels",
+                "aps:GetSeries",
+                "aps:GetMetricMetadata"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOL
+
+cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
+{
+  "Version": "2012-10-17",
+  "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "grafana.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole",
+            "Condition": {
+                "StringEquals": {
+                    "aws:SourceAccount": $ACCOUNTID
+                },
+                "StringLike": {
+                    "aws:SourceArn": "arn:aws:grafana:$AWS_REGION:$ACCOUNTID:/workspaces/*"
+                }
+            }
+        }]
+}
+EOL
+
+aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file:///tmp/grafana-prometheus-policy.json
+aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document file:///tmp/grafana-prometheus-trust-policy.json
+aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
+
+aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
+    --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
+    --workspace-role-arn "arn:aws:iam::${ACCOUNTID}:role/$GRA_ROLE_NAME"
+
+echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="
 
@@ -95,20 +149,31 @@ metadata:
   tags:
     karpenter.sh/discovery: ${EKSCLUSTER_NAME}
     for-use-with-amazon-emr-managed-policies: "true"
-managedNodeGroups:
-  - instanceType: m5.large
-    amiFamily: AmazonLinux2
-    name: ${EKSCLUSTER_NAME}-ng
-    desiredCapacity: 1
-    minSize: 1
-    maxSize: 2
 vpc:
   clusterEndpoints:
       publicAccess: true
       privateAccess: true  
 availabilityZones: ["${AWS_REGION}a","${AWS_REGION}b"]
 iam:
-  withOIDC: true
+  withOIDC: true    
+managedNodeGroups:
+  - name: ${EKSCLUSTER_NAME}-ng
+    instanceType: c5.9xlarge
+    availabilityZones: ["${AWS_REGION}b"] 
+    preBootstrapCommands:
+      - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
+      - "sudo mount -a"
+      - "sudo chown ec2-user:ec2-user /local1"
+    volumeSize: 20
+    minSize: 1
+    desiredCapacity: 1
+    maxSize: 30
+    labels:
+      app: caspark
+    tags:
+      # required for cluster-autoscaler auto-discovery
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/$EKSCLUSTER_NAME: "owned"
 cloudWatch: 
  clusterLogging:
    enableTypes: ["*"]
@@ -159,14 +224,13 @@ helm install prometheus prometheus-community/prometheus -n prometheus -f prometh
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"
 echo "==============================================="
-# create node and node instance role
-TEMPOUT=$(mktemp)
-curl -fsSL https://karpenter.sh/docs/getting-started/getting-started-with-eksctl/cloudformation.yaml >$TEMPOUT &&
-    aws cloudformation deploy \
-        --stack-name Karpenter-${EKSCLUSTER_NAME} \
-        --template-file ${TEMPOUT} \
-        --capabilities CAPABILITY_NAMED_IAM \
-        --parameter-overrides ClusterName=${EKSCLUSTER_NAME}
+# create IAM role and launch template
+CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
+aws cloudformation deploy \
+    --stack-name Karpenter-${EKSCLUSTER_NAME} \
+    --template-file file://$(pwd)/karpaenter-cfn.yaml \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --parameter-overrides "ClusterName=${EKSCLUSTER_NAME}" "EKSClusterSgId=${CONTROLPLANE_SG}"
 
 eksctl create iamidentitymapping \
     --username system:node:{{EC2PrivateDNSName}} \
@@ -184,7 +248,7 @@ eksctl create iamserviceaccount \
     --approve
 
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
-aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
+# aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
 
 # Install
 helm repo add karpenter https://charts.karpenter.sh
@@ -195,10 +259,10 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter \
     --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=${KARPENTER_IAM_ROLE_ARN} \
     --set clusterName=${EKSCLUSTER_NAME} \
     --set clusterEndpoint=$(aws eks describe-cluster --name ${EKSCLUSTER_NAME} --query "cluster.endpoint" --output json) \
-    --set aws.defaultInstanceProfile=KarpenterNodeInstanceProfile-${EKSCLUSTER_NAME} \
+    --set hostNetwork=true \
     --set defaultProvisioner.create=false \
     --wait \
-    --debug
+    --debug # --set aws.defaultInstanceProfile=KarpenterNodeInstanceProfile-${EKSCLUSTER_NAME} \
 
 echo "==============================================="
 echo "Create a Karpenter Provisioner for Spark ......"
@@ -206,3 +270,19 @@ echo "==============================================="
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
 kubectl apply -f k-provisioner.yaml
+
+echo "============================================================================="
+echo "  Create ECR for benchmark utility docker image ......"
+echo "============================================================================="
+export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+aws ecr create-repository --repository-name eks-spark-benchmark --image-scanning-configuration scanOnPush=true
+# get EMR on EKS base image
+export SRC_ECR_URL=755674844232.dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $SRC_ECR_URL
+docker pull $SRC_ECR_URL/spark/emr-6.5.0:latest
+# Custom image on top of the EMR Spark runtime
+docker build -t $ECR_URL/eks-spark-benchmark:emr6.5 -f docker/benchmark-util/Dockerfile --build-arg SPARK_BASE_IMAGE=$SRC_ECR_URL/spark/emr-6.5.0:latest .
+# push
+aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+docker push $ECR_URL/eks-spark-benchmark:emr6.5

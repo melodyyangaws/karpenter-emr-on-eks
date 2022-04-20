@@ -7,6 +7,7 @@ export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_ROLE_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
 export S3BUCKET=$EMRCLUSTER_NAME-$ACCOUNTID-$AWS_REGION
+export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 aws emr-containers start-job-run \
   --virtual-cluster-id $VIRTUAL_CLUSTER_ID \
@@ -23,8 +24,7 @@ aws emr-containers start-job-run \
       {
         "classification": "spark-defaults", 
         "properties": {
-          "spark.kubernetes.container.image": "public.ecr.aws/myang-poc/benchmark:6.5",
-          "spark.kubernetes.container.image.pullPolicy": "IfNotPresent",
+          "spark.kubernetes.container.image":  "'$ECR_URL'/eks-spark-benchmark:emr6.5",
 
           "spark.network.timeout": "2000s",
           "spark.driver.memoryOverhead": "1G",

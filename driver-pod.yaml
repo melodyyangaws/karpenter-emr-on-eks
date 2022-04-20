@@ -1,0 +1,368 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubernetes.io/psp: eks.privileged
+    prometheus.io/path: /metrics/executors/prometheus/
+    prometheus.io/port: "4040"
+    prometheus.io/scrape: "true"
+  creationTimestamp: "2022-04-19T01:28:37Z"
+  labels:
+    emr-containers.amazonaws.com/component: driver
+    emr-containers.amazonaws.com/job.id: 0000000301vdnceuc90
+    emr-containers.amazonaws.com/resource.type: job.run
+    emr-containers.amazonaws.com/virtual-cluster-id: jp8e60lzwsus16qyp0a06uh65
+    spark-app-selector: spark-0000000301vdnceuc90
+    spark-role: driver
+  name: spark-0000000301vdnceuc90-driver
+  namespace: emr
+  ownerReferences:
+  - apiVersion: batch/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ConfigMap
+    name: 0000000301vdnceuc90-spark-defaults
+    uid: 665db30d-8c06-40c1-a42c-298ca26e6bc6
+  resourceVersion: "807420"
+  uid: 40351fb7-8516-4473-b1d7-f970613b0aa7
+spec:
+  containers:
+  - env:
+    - name: SPARK_CONTAINER_ID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SPARK_ROLE
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.labels['spark-role']
+    - name: K8S_SPARK_LOG_URL_STDERR
+      value: /var/log/spark/user/$(SPARK_CONTAINER_ID)/stderr
+    - name: K8S_SPARK_LOG_URL_STDOUT
+      value: /var/log/spark/user/$(SPARK_CONTAINER_ID)/stdout
+    - name: SIDECAR_SIGNAL_FILE
+      value: /var/log/fluentd/main-container-terminated
+    - name: FLUENTD_CONF
+      value: fluent.conf
+    - name: K8S_SPARK_EVENT_LOG_DIR
+      value: /var/log/spark/apps
+    - name: AWS_REGION
+      value: us-west-2
+    - name: RUBY_GC_HEAP_OLDOBJECT_LIMIT_FACTOR
+      value: "0.9"
+    - name: SPARK_APPLICATION_ID
+      value: spark-0000000301vdnceuc90
+    - name: AWS_ROLE_ARN
+      value: arn:aws:iam::021732063925:role/emr-on-tfc-summit-execution-role
+    - name: AWS_WEB_IDENTITY_TOKEN_FILE
+      value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+    image: 895885662937.dkr.ecr.us-west-2.amazonaws.com/fluentd/emr-6.5.0:latest
+    imagePullPolicy: Always
+    name: emr-container-fluentd
+    resources:
+      limits:
+        memory: 512Mi
+      requests:
+        memory: 200Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsGroup: 1000
+      runAsNonRoot: true
+      runAsUser: 999
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/fluent/fluent.conf
+      name: config-volume
+      subPath: driver
+    - mountPath: /var/emr-container/s3
+      name: emr-container-s3
+      readOnly: true
+    - mountPath: /var/log/fluentd
+      name: emr-container-communicate
+    - mountPath: /var/log/spark/user
+      name: emr-container-application-log-dir
+    - mountPath: /var/log/spark/apps
+      name: emr-container-event-log-dir
+    - mountPath: /tmp
+      name: temp-data-dir
+    - mountPath: /home/hadoop
+      name: home-dir
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-zqc6p
+      readOnly: true
+    - mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+      name: aws-iam-token
+      readOnly: true
+  - args:
+    - driver
+    - --properties-file
+    - /usr/lib/spark/conf/spark.properties
+    - --class
+    - com.amazonaws.eks.tpcds.BenchmarkSQL
+    - local:///usr/lib/spark/examples/jars/eks-spark-benchmark-assembly-1.0.jar
+    - s3://blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned
+    - s3://emr-on-tfc-summit-021732063925-us-west-2/EMRONEKS_TPCDS-TEST-3T-RESULT
+    - /opt/tpcds-kit/tools
+    - parquet
+    - "3000"
+    - "1"
+    - "false"
+    - q1-v2.4,q10-v2.4,q11-v2.4,q12-v2.4,q13-v2.4,q14a-v2.4,q14b-v2.4,q15-v2.4,q16-v2.4,q17-v2.4,q18-v2.4,q19-v2.4,q2-v2.4,q20-v2.4,q21-v2.4,q22-v2.4,q23a-v2.4,q23b-v2.4,q24a-v2.4,q24b-v2.4,q25-v2.4,q26-v2.4,q27-v2.4,q28-v2.4,q29-v2.4,q3-v2.4,q30-v2.4,q31-v2.4,q32-v2.4,q33-v2.4,q34-v2.4,q35-v2.4,q36-v2.4,q37-v2.4,q38-v2.4,q39a-v2.4,q39b-v2.4,q4-v2.4,q40-v2.4,q41-v2.4,q42-v2.4,q43-v2.4,q44-v2.4,q45-v2.4,q46-v2.4,q47-v2.4,q48-v2.4,q49-v2.4,q5-v2.4,q50-v2.4,q51-v2.4,q52-v2.4,q53-v2.4,q54-v2.4,q55-v2.4,q56-v2.4,q57-v2.4,q58-v2.4,q59-v2.4,q6-v2.4,q60-v2.4,q61-v2.4,q62-v2.4,q63-v2.4,q64-v2.4,q65-v2.4,q66-v2.4,q67-v2.4,q68-v2.4,q69-v2.4,q7-v2.4,q70-v2.4,q71-v2.4,q72-v2.4,q73-v2.4,q74-v2.4,q75-v2.4,q76-v2.4,q77-v2.4,q78-v2.4,q79-v2.4,q8-v2.4,q80-v2.4,q81-v2.4,q82-v2.4,q83-v2.4,q84-v2.4,q85-v2.4,q86-v2.4,q87-v2.4,q88-v2.4,q89-v2.4,q9-v2.4,q90-v2.4,q91-v2.4,q92-v2.4,q93-v2.4,q94-v2.4,q95-v2.4,q96-v2.4,q97-v2.4,q98-v2.4,q99-v2.4,ss_max-v2.4
+    - "true"
+    env:
+    - name: SPARK_USER
+      value: hadoop
+    - name: SPARK_APPLICATION_ID
+      value: spark-0000000301vdnceuc90
+    - name: AWS_REGION
+      value: us-west-2
+    - name: SPARK_DRIVER_BIND_ADDRESS
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.podIP
+    - name: HADOOP_CONF_DIR
+      value: /etc/hadoop/conf
+    - name: SPARK_LOCAL_DIRS
+      value: /var/data/spark-9ff97a9c-aa55-46f1-8b5d-7d72b75edacd
+    - name: SPARK_CONTAINER_ID
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SIDECAR_SIGNAL_FILE
+      value: /var/log/fluentd/main-container-terminated
+    - name: K8S_SPARK_LOG_ERROR_REGEX
+      value: (Error|Exception|Fail)
+    - name: TERMINATION_ERROR_LOG_FILE_PATH
+      value: /var/log/spark/error.log
+    - name: SPARK_CONF_DIR
+      value: /usr/lib/spark/conf
+    - name: AWS_ROLE_ARN
+      value: arn:aws:iam::021732063925:role/emr-on-tfc-summit-execution-role
+    - name: AWS_WEB_IDENTITY_TOKEN_FILE
+      value: /var/run/secrets/eks.amazonaws.com/serviceaccount/token
+    image: public.ecr.aws/myang-poc/benchmark:6.5
+    imagePullPolicy: Always
+    name: spark-kubernetes-driver
+    ports:
+    - containerPort: 7078
+      name: driver-rpc-port
+      protocol: TCP
+    - containerPort: 7079
+      name: blockmanager
+      protocol: TCP
+    - containerPort: 4040
+      name: spark-ui
+      protocol: TCP
+    resources:
+      limits:
+        memory: 5Gi
+      requests:
+        cpu: "4"
+        memory: 5Gi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
+      privileged: false
+      readOnlyRootFilesystem: true
+      runAsGroup: 1000
+      runAsNonRoot: true
+      runAsUser: 999
+    terminationMessagePath: /var/log/spark/error.log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /etc/hadoop/conf
+      name: hadoop-properties
+    - mountPath: /opt/spark/pod-template
+      name: pod-template-volume
+    - mountPath: /var/data/spark-9ff97a9c-aa55-46f1-8b5d-7d72b75edacd
+      name: spark-local-dir-1
+    - mountPath: /var/log/fluentd
+      name: emr-container-communicate
+    - mountPath: /var/log/spark/user
+      name: emr-container-application-log-dir
+    - mountPath: /var/log/spark/apps
+      name: emr-container-event-log-dir
+    - mountPath: /tmp
+      name: temp-data-dir
+    - mountPath: /mnt
+      name: mnt-dir
+    - mountPath: /home/hadoop
+      name: home-dir
+    - mountPath: /usr/lib/spark/conf/spark-defaults.conf
+      name: 0000000301vdnceuc90-spark-defaults
+      subPath: spark-defaults.conf
+    - mountPath: /usr/lib/spark/conf/spark.properties
+      name: spark-conf-volume-driver
+      subPath: spark.properties
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-zqc6p
+      readOnly: true
+    - mountPath: /var/run/secrets/eks.amazonaws.com/serviceaccount
+      name: aws-iam-token
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: ip-192-168-89-101.us-west-2.compute.internal
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Never
+  schedulerName: default-scheduler
+  securityContext:
+    fsGroup: 65534
+  serviceAccount: emr-containers-sa-spark-driver-021732063925-2j091q057wv2p6kpr5sk42q8x76ifkjd0a9a2so6imbb8nheud
+  serviceAccountName: emr-containers-sa-spark-driver-021732063925-2j091q057wv2p6kpr5sk42q8x76ifkjd0a9a2so6imbb8nheud
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: aws-iam-token
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          audience: sts.amazonaws.com
+          expirationSeconds: 86400
+          path: token
+  - configMap:
+      defaultMode: 420
+      items:
+      - key: container-log4j.properties
+        path: container-log4j.properties
+      - key: core-site.xml
+        path: core-site.xml
+      - key: hadoop-env.sh
+        path: hadoop-env.sh
+      - key: hdfs-site.xml
+        path: hdfs-site.xml
+      - key: log4j.properties
+        path: log4j.properties
+      - key: mapred-site.xml
+        path: mapred-site.xml
+      name: spark-0000000301vdnceuc90-1643ea803f6f856a-hadoop-config
+    name: hadoop-properties
+  - configMap:
+      defaultMode: 420
+      items:
+      - key: podspec-configmap-key
+        path: pod-spec-template.yml
+      name: spark-0000000301vdnceuc90-1643ea803f6f856a-driver-podspec-conf-map
+    name: pod-template-volume
+  - emptyDir: {}
+    name: spark-local-dir-1
+  - emptyDir: {}
+    name: emr-container-communicate
+  - configMap:
+      defaultMode: 420
+      name: fluentd-jp8e60lzwsus16qyp0a06uh65-0000000301vdnceuc90
+    name: config-volume
+  - name: emr-container-s3
+    secret:
+      defaultMode: 420
+      secretName: emr-containers-s3-jp8e60lzwsus16qyp0a06uh65-0000000301vdnceuc90
+  - emptyDir: {}
+    name: emr-container-application-log-dir
+  - emptyDir: {}
+    name: emr-container-event-log-dir
+  - emptyDir: {}
+    name: temp-data-dir
+  - emptyDir: {}
+    name: mnt-dir
+  - emptyDir: {}
+    name: home-dir
+  - configMap:
+      defaultMode: 420
+      name: 0000000301vdnceuc90-spark-defaults
+    name: 0000000301vdnceuc90-spark-defaults
+  - configMap:
+      defaultMode: 420
+      items:
+      - key: spark.properties
+        mode: 493
+        path: spark.properties
+      name: spark-drv-fd384c803f6f8c74-conf-map
+    name: spark-conf-volume-driver
+  - name: kube-api-access-zqc6p
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2022-04-19T01:28:37Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2022-04-19T01:28:44Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2022-04-19T01:28:44Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2022-04-19T01:28:37Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://ab7b5ad4988ffae0f970dd38cc34604c6aa1aac954c4e47d8ec4df84b3ecc038
+    image: 895885662937.dkr.ecr.us-west-2.amazonaws.com/fluentd/emr-6.5.0:latest
+    imageID: 895885662937.dkr.ecr.us-west-2.amazonaws.com/fluentd/emr-6.5.0@sha256:a487ff25d74c8c47f15b921182317a0678b153756de736b88edaafefd1965174
+    lastState: {}
+    name: emr-container-fluentd
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2022-04-19T01:28:42Z"
+  - containerID: containerd://1ba35c802bf587ae52823377f61b28524684ceafa596032254ed48d0933efd41
+    image: public.ecr.aws/myang-poc/benchmark:6.5
+    imageID: public.ecr.aws/myang-poc/benchmark@sha256:ac722b0d5ba24ed767c18eba92b5e5015eac2263ff20de0289b0f31c3b51d30d
+    lastState: {}
+    name: spark-kubernetes-driver
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2022-04-19T01:28:43Z"
+  hostIP: 192.168.89.101
+  phase: Running
+  podIP: 192.168.73.40
+  podIPs:
+  - ip: 192.168.73.40
+  qosClass: Burstable
+  startTime: "2022-04-19T01:28:37Z"
