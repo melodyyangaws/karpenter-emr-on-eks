@@ -27,14 +27,16 @@ iam:
       name: amp-iamproxy-ingest-service-account
       namespace: prometheus
       labels: {aws-usage: "monitoring"}
-    attachPolicyARN: "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
+    attachPolicyARNs: 
+    - "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
     roleName: {EKSCLUSTER_NAME}-prometheus-ingest 
     roleOnly: true
   - metadata:
       name: karpenter
       namespace: karpenter
       labels: {aws-usage: "monitoring"}
-    attachPolicyARN: "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
+    attachPolicyARNs: 
+    - "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
     roleName: {EKSCLUSTER_NAME}-karpenter
     roleOnly: true
     
@@ -45,7 +47,7 @@ managedNodeGroups:
     preBootstrapCommands:
       - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
       - "sudo mount -a"
-      - "sudo chown ec2-user:ec2-user /local1"
+      - "sudo chown ec2-user:ec2-user /local*"
     volumeSize: 20
     minSize: 1
     desiredCapacity: 1
