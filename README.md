@@ -20,8 +20,9 @@ The script installs CLI tools, creates a new EKS cluster, enables EMR on EKS, an
 ## Build custom docker image for EMR on EKS
 while the workshop environment setup is still running, let's build a docker image in the ["workshop-ide" AWS Cloud9 environment](https://console.aws.amazon.com/cloud9).
 ```bash
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export AWS_REGION=us-east-1
+
+export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
 # create ECR repo
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
@@ -35,7 +36,7 @@ docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ```
 
 ## Run sample jobs
-To monitor the autoscaling perforamcne, we need three command line windows in the [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Go to "Actions" dropdown list -> select "Split into rows" twice.
+To monitor the autoscaling perforamcne, we need three command line windows in the [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Go to "Actions" dropdown list -> select "Split into rows" twice. Note the default region is `us-east-1`. 
 
 Run the command to monitor the scaling status in a window:
 ```bash
