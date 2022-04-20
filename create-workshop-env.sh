@@ -106,7 +106,7 @@ helm install nodescaler autoscaler/cluster-autoscaler -n kube-system -f helm/aut
 echo "====================================================="
 echo "  Install Prometheus to EKS for monitroing ......"
 echo "====================================================="
-# kubectl create namespace prometheus
+kubectl create namespace prometheus
 # eksctl create iamserviceaccount \
 #     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
 #     --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
@@ -129,15 +129,15 @@ helm install prometheus prometheus-community/prometheus -n prometheus -f helm/pr
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"
 echo "==============================================="
+kubectl create namespace karpenter
 # create IAM role and launch template
 CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
 DNS_IP=$(kubectl get svc -n kube-system | grep kube-dns | awk '{print $3}')
 API_SERVER=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.endpoint' --output text)
 B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text)
-
 aws cloudformation deploy \
     --stack-name Karpenter-${EKSCLUSTER_NAME} \
-    --template-file file://$(pwd)/karpenter-cfn.yaml \
+    --template-file file://karpenter-cfn.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
 
@@ -186,19 +186,3 @@ aws emr-containers create-virtual-cluster --name $EMRCLUSTER_NAME \
         "type": "EKS",
         "info": { "eksInfo": { "namespace":"'emr'" } }
     }'
-
-echo "============================================================================="
-echo "  Create ECR for benchmark utility docker image ......"
-echo "============================================================================="
-export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
-aws ecr create-repository --repository-name eks-spark-benchmark --image-scanning-configuration scanOnPush=true
-# get EMR on EKS base image
-export SRC_ECR_URL=755674844232.dkr.ecr.us-east-1.amazonaws.com
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $SRC_ECR_URL
-docker pull $SRC_ECR_URL/spark/emr-6.5.0:latest
-# Custom image on top of the EMR Spark runtime
-docker build -t $ECR_URL/eks-spark-benchmark:emr6.5 -f docker/benchmark-util/Dockerfile --build-arg SPARK_BASE_IMAGE=$SRC_ECR_URL/spark/emr-6.5.0:latest .
-# push
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
-docker push $ECR_URL/eks-spark-benchmark:emr6.5
