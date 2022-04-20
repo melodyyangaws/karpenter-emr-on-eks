@@ -8,7 +8,7 @@ export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
 
 aws emr-containers start-job-run \
   --virtual-cluster-id ${VIRTUAL_CLUSTER_ID} \
-  --name sample-job \
+  --name sample-on-karpenter \
   --execution-role-arn ${EMR_ROLE_ARN} \
   --release-label emr-6.5.0-latest \
   --job-driver '{

@@ -86,10 +86,12 @@ EOL
 aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file://iam/grafana-prometheus-policy.json
 aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document file:///tmp/grafana-prometheus-trust-policy.json
 aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
-
-aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
-    --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
-    --workspace-role-arn "arn:aws:iam::${ACCOUNTID}:role/$GRA_ROLE_NAME"
+ws=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id")
+if [ -z "$ws" ]; then
+    aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
+        --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
+        --workspace-role-arn "arn:aws:iam::${ACCOUNTID}:role/$GRA_ROLE_NAME"
+fi
 
 echo "==============================================="
 echo "  Create EKS Cluster ......"
@@ -134,7 +136,7 @@ helm install prometheus prometheus-community/prometheus -n prometheus -f helm/pr
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"
 echo "==============================================="
-kubectl create namespace karpenter
+# kubectl create namespace karpenter
 # create IAM role and launch template
 CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
 DNS_IP=$(kubectl get svc -n kube-system | grep kube-dns | awk '{print $3}')
@@ -142,7 +144,7 @@ API_SERVER=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER
 B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text)
 aws cloudformation deploy \
     --stack-name Karpenter-${EKSCLUSTER_NAME} \
-    --template-file file://karpenter-cfn.yaml \
+    --template-file karpenter-cfn.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
 
@@ -158,21 +160,15 @@ eksctl create iamserviceaccount \
     --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
     --role-name "${EKSCLUSTER_NAME}-karpenter" \
     --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
-    --role-only \
     --approve
 
-export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 # aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
-
+export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 helm repo add karpenter https://charts.karpenter.sh
-helm repo update
 helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.8.1 \
     --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER} \
     --debug
 
-echo "==============================================="
-echo "Create a Karpenter Provisioner for Spark ......"
-echo "==============================================="
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
 kubectl apply -f k-provisioner.yaml
