@@ -117,7 +117,7 @@ cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
         "Action": "sts:AssumeRole",
         "Condition": {
             "StringEquals": {
-                "aws:SourceAccount": $ACCOUNTID
+                "aws:SourceAccount": "$ACCOUNTID"
             },
             "StringLike": {
                 "aws:SourceArn": "arn:aws:grafana:$AWS_REGION:$ACCOUNTID:/workspaces/*"
