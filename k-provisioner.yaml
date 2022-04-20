@@ -11,7 +11,7 @@ spec:
       karpenter.sh/discovery: {EKSCLUSTER_NAME}
     securityGroupSelector:
       karpenter.sh/discovery: {EKSCLUSTER_NAME}
-  lables:
+  labels:
     app: kspark
   requirements:
     - key: "karpenter.sh/capacity-type"
