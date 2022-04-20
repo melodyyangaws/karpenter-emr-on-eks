@@ -30,6 +30,11 @@ curl -s https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz | tar xz -C ./ &&
     rm -r linux-amd64
 echo helm cli version is $(helm version --short)
 
+echo "==============================================="
+echo "  create Cloud9 IDE environment ......"
+echo "==============================================="
+aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --automatic-stop-time-minutes 60
+
 # create S3 bucket for application
 aws s3 mb s3://$S3TEST_BUCKET --region $AWS_REGION
 

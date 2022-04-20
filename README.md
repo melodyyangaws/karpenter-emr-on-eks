@@ -17,21 +17,20 @@ The script installs CLI tools, creates a new EKS cluster, enables EMR on EKS, an
 ./create-workshop-env.sh $AWS_REGION
 ```
 
-## Build benchmark utility docker image 
-while the workshop environment setup is still running, let's build a docker image.
+## Build custom docker image for EMR on EKS
+while the workshop environment setup is still running, let's build a docker image in the ["workshop-ide" AWS Cloud9 environment](https://console.aws.amazon.com/cloud9).
 ```bash
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
+export AWS_REGION=us-east-1
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
+# create ECR repo
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 aws ecr create-repository --repository-name eks-spark-benchmark --image-scanning-configuration scanOnPush=true
-# get EMR on EKS base image
-export SRC_ECR_URL=755674844232.dkr.ecr.us-east-1.amazonaws.com
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $SRC_ECR_URL
-docker pull $SRC_ECR_URL/spark/emr-6.5.0:latest
-# build image
-docker build -t $ECR_URL/eks-spark-benchmark:emr6.5 -f docker/Dockerfile-benchmarkutil --build-arg SPARK_BASE_IMAGE=$SRC_ECR_URL/spark/emr-6.5.0:latest .
+# get image
+docker pull public.ecr.aws/myang-poc/benchmark:6.5
+# tag image
+docker tag public.ecr.aws/myang-poc/benchmark:6.5 $ECR_URL/eks-spark-benchmark:emr6.5 
 # push
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ```
 
