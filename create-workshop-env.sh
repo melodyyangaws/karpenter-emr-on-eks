@@ -38,33 +38,6 @@ echo "  setup IAM roles for EMR on EKS ......"
 echo "==============================================="
 # Create a job execution role
 export ROLE_NAME=${EMRCLUSTER_NAME}-execution-role
-cat >/tmp/job-execution-policy.json <<EOL
-{
-    "Version": "2012-10-17",
-    "Statement": [ 
-        {
-            "Effect": "Allow",
-            "Action": ["s3:PutObject","s3:DeleteObject","s3:GetObject","s3:ListBucket"],
-            "Resource": [
-              "arn:aws:s3:::${S3TEST_BUCKET}",
-              "arn:aws:s3:::${S3TEST_BUCKET}/*",
-              "arn:aws:s3:::*.elasticmapreduce",
-              "arn:aws:s3:::*.elasticmapreduce/*",
-              "arn:aws:s3:::nyc-tlc",
-              "arn:aws:s3:::nyc-tlc/*",
-              "arn:aws:s3:::blogpost-sparkoneks-us-east-1/blog/BLOG_TPCDS-TEST-3T-partitioned/*",
-              "arn:aws:s3:::blogpost-sparkoneks-us-east-1"
-            ]
-        }, 
-        {
-            "Effect": "Allow",
-            "Action": [ "logs:PutLogEvents", "logs:CreateLogStream", "logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:CreateLogGroup" ],
-            "Resource": [ "arn:aws:logs:*:*:*" ]
-        }
-    ]
-}
-EOL
-
 cat >/tmp/trust-policy.json <<EOL
 {
   "Version": "2012-10-17",
@@ -75,36 +48,15 @@ cat >/tmp/trust-policy.json <<EOL
     } ]
 }
 EOL
-
-aws iam create-policy --policy-name $ROLE_NAME-policy --policy-document file:///tmp/job-execution-policy.json
+sed -i -- 's/{S3TEST_BUCKET}/'$S3TEST_BUCKET'/g' iam/job-execution-policy.json
+aws iam create-policy --policy-name $ROLE_NAME-policy --policy-document file://iam/job-execution-policy.json
 aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file:///tmp/trust-policy.json
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
 echo "==============================================="
 echo "  Create Grafana Role and workspace ......"
 echo "==============================================="
-
 export GRA_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
-cat >/tmp/grafana-prometheus-policy.json <<EOL
-{
-    "Version": "2012-10-17",
-    "Statement": [ 
-          {
-            "Effect": "Allow",
-            "Action": [
-                "aps:ListWorkspaces",
-                "aps:DescribeWorkspace",
-                "aps:QueryMetrics",
-                "aps:GetLabels",
-                "aps:GetSeries",
-                "aps:GetMetricMetadata"
-            ],
-            "Resource": "*"
-        }
-    ]
-}
-EOL
-
 cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
 {
     "Version": "2012-10-17",
@@ -126,8 +78,7 @@ cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
     }]
 }
 EOL
-
-aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file:///tmp/grafana-prometheus-policy.json
+aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file://iam/grafana-prometheus-policy.json
 aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document file:///tmp/grafana-prometheus-trust-policy.json
 aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
 
