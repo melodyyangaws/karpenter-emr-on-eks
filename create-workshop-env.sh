@@ -107,22 +107,23 @@ EOL
 
 cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
 {
-  "Version": "2012-10-17",
-  "Statement": [ {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "grafana.amazonaws.com"
+    "Version": "2012-10-17",
+    "Statement": [ 
+    {
+        "Effect": "Allow",
+        "Principal": {
+            "Service": "grafana.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole",
+        "Condition": {
+            "StringEquals": {
+                "aws:SourceAccount": $ACCOUNTID
             },
-            "Action": "sts:AssumeRole",
-            "Condition": {
-                "StringEquals": {
-                    "aws:SourceAccount": $ACCOUNTID
-                },
-                "StringLike": {
-                    "aws:SourceArn": "arn:aws:grafana:$AWS_REGION:$ACCOUNTID:/workspaces/*"
-                }
+            "StringLike": {
+                "aws:SourceArn": "arn:aws:grafana:$AWS_REGION:$ACCOUNTID:/workspaces/*"
             }
-        }]
+        }
+    }]
 }
 EOL
 
