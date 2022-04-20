@@ -8,7 +8,7 @@ Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amaz
 ```bash
 # download the project
 git clone https://github.com/melodyyangaws/karpenter-emr-on-eks.git
-cd kuarpenter-emr-on-eks
+cd karpenter-emr-on-eks
 export AWS_REGION=us-east-1
 ````
 

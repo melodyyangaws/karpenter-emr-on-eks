@@ -31,15 +31,6 @@ iam:
     - "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess"
     roleName: {EKSCLUSTER_NAME}-prometheus-ingest 
     roleOnly: true
-  - metadata:
-      name: karpenter
-      namespace: karpenter
-      labels: {aws-usage: "monitoring"}
-    attachPolicyARNs: 
-    - "arn:aws:iam::{ACCOUNTID}:policy/KarpenterControllerPolicy-{EKSCLUSTER_NAME}"
-    roleName: {EKSCLUSTER_NAME}-karpenter
-    roleOnly: true
-    
 managedNodeGroups:
   - name: {EKSCLUSTER_NAME}-ng
     instanceType: c5.9xlarge

@@ -15,12 +15,12 @@ echo "  install CLI tools ......"
 echo "==============================================="
 
 # Install eksctl on cloud9/cloudshell
-curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+curl -s --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
 sudo mv -v /tmp/eksctl /usr/local/bin
 echo eksctl version is $(eksctl version)
 
 # Install kubectl on cloud9/cloudshell
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -s -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 echo kubectl version is $(kubectl version --short --client)
 
@@ -197,13 +197,13 @@ eksctl create iamidentitymapping \
     --group system:bootstrappers \
     --group system:nodes
 
-# # controller role
-# eksctl create iamserviceaccount \
-#     --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
-#     --role-name "${EKSCLUSTER_NAME}-karpenter" \
-#     --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
-#     --role-only \
-#     --approve
+# controller role
+eksctl create iamserviceaccount \
+    --cluster "${EKSCLUSTER_NAME}" --name karpenter --namespace karpenter \
+    --role-name "${EKSCLUSTER_NAME}-karpenter" \
+    --attach-policy-arn "arn:aws:iam::${ACCOUNTID}:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}" \
+    --role-only \
+    --approve
 
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 # aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
