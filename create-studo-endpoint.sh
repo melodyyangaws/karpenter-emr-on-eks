@@ -3,18 +3,10 @@
 # SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
 # SPDX-License-Identifier: MIT-0
 
-AWS_REGION=$1
-export EKSCLUSTER_NAME=tfc-summit
-
 echo "==============================================="
 echo "  setup IAM roles for EMR Studio ......"
 echo "==============================================="
-
-export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export STUDIO_SERVICE_ROLE=${EMRCLUSTER_NAME}-StudioServiceRole
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
-export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
-
 cat >/tmp/studio-trust-policy.json <<EOL
 {
   "Version": "2012-10-17",
@@ -69,7 +61,7 @@ cat >/tmp/studio-userrole-policy.json <<EOL
         {
             "Action": "s3:GetObject",
             "Resource": [
-                "arn:aws:s3:::${S3TEST_BUCKET}/*",
+                "arn:aws:s3:::${S3BUCKET}/*",
                 "arn:aws:s3:::nyc-tlc/*",
                 "arn:aws:s3:::aws-logs-$ACCOUNTID-$AWS_REGION/elasticmapreduce/*"
             ],

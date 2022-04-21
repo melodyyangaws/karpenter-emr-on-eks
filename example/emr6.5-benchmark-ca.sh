@@ -1,12 +1,5 @@
-#!/bin/bash
-
-# export EMRCLUSTER_NAME=emr-on-tfc-summit
-# export AWS_REGION=us-east-1
-
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '$EMRCLUSTER_NAME' && state == 'RUNNING'].id" --output text)
 export EMR_ROLE_ARN=arn:aws:iam::$ACCOUNTID:role/$EMRCLUSTER_NAME-execution-role
-export S3BUCKET=$EMRCLUSTER_NAME-$ACCOUNTID-$AWS_REGION
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 aws emr-containers start-job-run \
@@ -29,7 +22,8 @@ aws emr-containers start-job-run \
           "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/executor-pod-template.yaml",
 
           "spark.kubernetes.node.selector.app": "caspark",
-          
+          "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'AWS_REGION'b",
+
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
           "spark.kubernetes.executor.limit.cores": "4.3",

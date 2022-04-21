@@ -8,7 +8,14 @@ AWS_REGION=$1
 export EKSCLUSTER_NAME=tfc-summit
 export EMRCLUSTER_NAME=emr-on-$EKSCLUSTER_NAME
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
-export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
+export S3BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
+
+echo "export AWS_REGION=${AWS_REGION}" | tee -a ~/.bash_profile
+echo "export EKSCLUSTER_NAME=tfc-summit" | tee -a ~/.bash_profile
+echo "export EMRCLUSTER_NAME=$EMRCLUSTER_NAME" | tee -a ~/.bash_profile
+echo "export ACCOUNTID=${ACCOUNTID}" | tee -a ~/.bash_profile
+echo "export S3BUCKET=${S3BUCKET}" | tee -a ~/.bash_profile
+source ~/.bash_profile
 
 echo "==============================================="
 echo "  create Cloud9 IDE environment ......"
@@ -16,7 +23,7 @@ echo "==============================================="
 aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --automatic-stop-time-minutes 60
 
 # create S3 bucket for application
-aws s3 mb s3://$S3TEST_BUCKET --region $AWS_REGION
+aws s3 mb s3://$S3BUCKET --region $AWS_REGION
 
 echo "==============================================="
 echo "  setup IAM roles for EMR on EKS ......"
@@ -33,7 +40,7 @@ cat >/tmp/trust-policy.json <<EOL
     } ]
 }
 EOL
-sed -i -- 's/{S3TEST_BUCKET}/'$S3TEST_BUCKET'/g' iam/job-execution-policy.json
+sed -i -- 's/{S3BUCKET}/'$S3BUCKET'/g' iam/job-execution-policy.json
 aws iam create-policy --policy-name $ROLE_NAME-policy --policy-document file://iam/job-execution-policy.json
 aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file:///tmp/trust-policy.json
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
@@ -88,7 +95,7 @@ echo "==============================================="
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/autoscaler-values.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/autoscaler-values.yaml
 helm repo add autoscaler https://kubernetes.github.io/autoscaler
-helm install nodescaler autoscaler/cluster-autoscaler -n kube-system -f helm/autoscaler-values.yaml --debug
+helm upgrade --install nodescaler autoscaler/cluster-autoscaler -n kube-system -f helm/autoscaler-values.yaml
 
 echo "====================================================="
 echo "  Install Prometheus to EKS for monitroing ......"
@@ -116,7 +123,7 @@ sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
 sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
-helm install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
+helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
 
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"

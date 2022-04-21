@@ -21,8 +21,6 @@ The script install CLI tools, creates a new EKS cluster, enables EMR on EKS, and
 ## Build custom docker image for EMR on EKS
 while the workshop environment setup is still running, let's build a docker image in the ["workshop-ide" AWS Cloud9 environment](https://console.aws.amazon.com/cloud9).
 ```bash
-export AWS_REGION=us-east-1
-export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
 # create ECR repo
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
@@ -50,25 +48,26 @@ Submit samples jobs in a 3rd window:
 
 ```bash
 cd karpenter-emr-on-eks
-export AWS_REGION=us-east-1
 ```
 ```bash
 # small job with 2 executors
-./example/sample-job.sh $AWS_REGION
+./example/sample-job-ca.sh
+./example/sample-job-karpenter.sh
 ```
 ```bash
 # medium size job with 9 executors
-./example/emr6.5-benchmark.sh $AWS_REGION
+./example/emr6.5-benchmark-ca.sh
+./example/emr6.5-benchmark-karpenter.sh
 ```
 ## Setup EMR studio with EMR on EKS
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
 
 ```bash
 sudo yum install -y openssl
-./create-studio-endpoint.sh $AWS_REGION
+./create-studio-endpoint.sh
 ````
 
 ## Clean up
 ```bash
-./clean-up.sh $AWS_REGION
+./clean-up.sh
 ```
