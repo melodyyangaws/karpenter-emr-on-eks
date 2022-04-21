@@ -76,6 +76,7 @@ aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document fil
 aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
 ws=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id" --output text)
 if [ -z "$ws" ]; then
+    echo "Creating a new grafana workspace..."
     aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
         --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
         --workspace-role-arn "arn:aws:iam::${ACCOUNTID}:role/$GRA_ROLE_NAME"
@@ -150,9 +151,10 @@ kubectl create namespace prometheus
 
 amp=$(aws amp list-workspaces --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
 if [ -z "$amp" ]; then
+    echo "Creating a new prometheus workspace..."
     export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
 else
-    echo "a proemetheus workspace exists..."
+    echo "A prometheus workspace already exists"
     export WORKSPACE_ID=$amp
 fi
 export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"

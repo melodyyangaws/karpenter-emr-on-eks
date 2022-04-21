@@ -38,9 +38,9 @@ docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ```
 
 ## 3. Test with sample Spark jobs
-To analyse the autoscaling perforamcne, we use [Amazon Managed Service for Prometheus (AMP)](https://aws.amazon.com/prometheus/) to ingest Spark job metrics and use an [Amazon Managed Grafana](https://aws.amazon.com/grafana/) dashboard to visualize. 
+To analyse the autoscaling perforamcne, we use [Amazon Managed Service for Prometheus (AMP)](https://aws.amazon.com/prometheus/) to ingest Spark metrics and use an [Amazon Managed Grafana](https://aws.amazon.com/grafana/) dashboard to visualize. 
 
-Follow the [grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready.
+**Follow the [grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready.**
 
 To monitor the autoscaling status in real time, go to the [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on "Actions" dropdown button -> select "Split into rows" twice. Note the default region is `us-east-1`. Change it to a different region if your infra setup wasn't in the default one.
 
