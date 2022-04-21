@@ -25,6 +25,7 @@ aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium 
 
 # create S3 bucket for application
 aws s3 mb s3://$S3BUCKET --region $AWS_REGION
+aws s3 sync example/pod-template s3://$S3BUCKET/pod-template
 
 echo "==============================================="
 echo "  setup IAM roles for EMR on EKS ......"

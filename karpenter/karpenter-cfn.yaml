@@ -28,21 +28,11 @@ Parameters:
     Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
     Default: /aws/service/eks/optimized-ami/1.21/amazon-linux-2/recommended/image_id
     Description: "AWS Systems Manager Parameter Store parameter of the AMI ID for the worker node instances. Change this value to match the version of Kubernetes you are using."
-  DisableIMDSv1:
-    Type: String
-    Default: "true"
-    AllowedValues:
-      - "false"
-      - "true"
 Conditions:
   HasNodeImageId: !Not
     - "Fn::Equals":
       - !Ref NodeImageId
       - ""
-  IMDSv1Disabled:
-    "Fn::Equals":
-      - !Ref DisableIMDSv1
-      - "true"
 Resources:
   KarpenterNodeInstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
@@ -145,12 +135,10 @@ Resources:
         SecurityGroupIds: 
           - !Ref EKSClusterSgId
         MetadataOptions:
-          HttpPutResponseHopLimit : 2
           HttpEndpoint: enabled
-          HttpTokens: !If
-            - IMDSv1Disabled
-            - required
-            - optional
+          HttpProtocolIpv6: disabled
+          HttpPutResponseHopLimit: "2"
+          HttpTokens: required
         TagSpecifications:
           - ResourceType: volume
             Tags:
