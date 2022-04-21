@@ -12,3 +12,6 @@ server:
         max_samples_per_send: 1000
         max_shards: 200
         capacity: 2500
+nodeSelector:        
+  topology.kubernetes.io/zone: "{AWS_REGION}a"
+  app: kspark

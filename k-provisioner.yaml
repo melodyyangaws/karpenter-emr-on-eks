@@ -14,13 +14,13 @@ spec:
   requirements:
     - key: "karpenter.sh/capacity-type"
       operator: In
-      values: ["on-demand"]
+      values: ["on-demand","spot"]
     - key: "kubernetes.io/arch" 
       operator: In
-      values: ["amd64"]
+      values: ["amd64","arm64"]
     - key: "node.kubernetes.io/instance-type"
       operator: In
-      values: ["c5.9xlarge","c5n.9xlarge","c6a.8xlarge","c6a.24xlarge","c6a.16xlarge","c6a.32xlarge"]  
+      values: ["c5d.9xlarge","c5ad.12xlarge","c5ad.16xlarge","c5d.12xlarge","c6gd.12xlarge","c6gd.16xlarge","m5ad.12xlarge","m5d.12xlarge","m6gd.12xlarge","m6gd.16xlarge","r6gd.12xlarge"]  
     - key: "topology.kubernetes.io/zone"
       operator: In
       values: ["{AWS_REGION}a"]

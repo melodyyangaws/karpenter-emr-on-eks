@@ -97,34 +97,6 @@ sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/autoscaler-values.yaml
 helm repo add autoscaler https://kubernetes.github.io/autoscaler
 helm upgrade --install nodescaler autoscaler/cluster-autoscaler -n kube-system -f helm/autoscaler-values.yaml
 
-echo "====================================================="
-echo "  Install Prometheus to EKS for monitroing ......"
-echo "====================================================="
-kubectl create namespace prometheus
-# eksctl create iamserviceaccount \
-#     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
-#     --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
-#     --attach-policy-arn "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess" \
-#     --role-only \
-#     --approve
-
-amp=$(aws amp list-workspaces --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
-if [ -z "$amp" ]; then
-    export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
-else
-    export WORKSPACE_ID=$amp
-fi
-export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
-
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
-helm repo update
-sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
-sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
-sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
-sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
-helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
-
 echo "==============================================="
 echo "  Install Karpenter to EKS ......"
 echo "==============================================="
@@ -164,6 +136,34 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --ver
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
 kubectl apply -f k-provisioner.yaml
+
+echo "====================================================="
+echo "  Install Prometheus to EKS for monitroing ......"
+echo "====================================================="
+kubectl create namespace prometheus
+# eksctl create iamserviceaccount \
+#     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
+#     --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
+#     --attach-policy-arn "arn:aws:iam::aws:policy/AmazonPrometheusRemoteWriteAccess" \
+#     --role-only \
+#     --approve
+
+amp=$(aws amp list-workspaces --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
+if [ -z "$amp" ]; then
+    export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
+else
+    export WORKSPACE_ID=$amp
+fi
+export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
+helm repo update
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
+sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
+helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
 
 echo "==============================================="
 echo "  Enable EMR on EKS ......"

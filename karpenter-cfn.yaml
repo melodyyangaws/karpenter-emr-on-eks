@@ -114,34 +114,34 @@ Resources:
               VolumeSize: 20
               VolumeType: gp3
               DeleteOnTermination: true
-          - DeviceName: /dev/xvdf
-            Ebs:
-              VolumeSize: !Ref NodeVolumeSize
-              VolumeType: gp3
-              Iops: 3000
-              Throughput: 200
-              DeleteOnTermination: true
-          - DeviceName: /dev/xvdg
-            Ebs:
-              VolumeSize: !Ref NodeVolumeSize
-              VolumeType: gp3
-              Iops: 3000
-              Throughput: 200
-              DeleteOnTermination: true
-          - DeviceName: /dev/xvdh
-            Ebs:
-              VolumeSize: !Ref NodeVolumeSize
-              VolumeType: gp3
-              Iops: 3000
-              Throughput: 200
-              DeleteOnTermination: true     
-          - DeviceName: /dev/xvdi
-            Ebs:
-              VolumeSize: !Ref NodeVolumeSize
-              VolumeType: gp3
-              Iops: 3000
-              Throughput: 200
-              DeleteOnTermination: true
+          # - DeviceName: /dev/xvdf
+          #   Ebs:
+          #     VolumeSize: !Ref NodeVolumeSize
+          #     VolumeType: gp3
+          #     Iops: 3000
+          #     Throughput: 200
+          #     DeleteOnTermination: true
+          # - DeviceName: /dev/xvdg
+          #   Ebs:
+          #     VolumeSize: !Ref NodeVolumeSize
+          #     VolumeType: gp3
+          #     Iops: 3000
+          #     Throughput: 200
+          #     DeleteOnTermination: true
+          # - DeviceName: /dev/xvdh
+          #   Ebs:
+          #     VolumeSize: !Ref NodeVolumeSize
+          #     VolumeType: gp3
+          #     Iops: 3000
+          #     Throughput: 200
+          #     DeleteOnTermination: true     
+          # - DeviceName: /dev/xvdi
+          #   Ebs:
+          #     VolumeSize: !Ref NodeVolumeSize
+          #     VolumeType: gp3
+          #     Iops: 3000
+          #     Throughput: 200
+          #     DeleteOnTermination: true
         SecurityGroupIds: 
           - !Ref EKSClusterSgId
         MetadataOptions:

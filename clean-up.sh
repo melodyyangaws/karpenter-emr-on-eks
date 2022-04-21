@@ -67,10 +67,6 @@ if ! [ -z "$TG" ]; then
 		aws elbv2 delete-target-group --target-group-arn $tg
 	done
 fi
-# delete ECR
-export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
-aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
-aws ecr delete-repository --repository-name eks-spark-benchmark --force
 # delete rest of CFN
 aws cloudformation delete-stack --stack-name Karpenter-$EKSCLUSTER_NAME
 eksctl delete cluster --name $EKSCLUSTER_NAME

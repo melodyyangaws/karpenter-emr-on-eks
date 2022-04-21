@@ -25,8 +25,6 @@ aws emr-containers start-job-run \
           "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/executor-pod-template.yaml",
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
-          "spark.kubernetes.executor.limit.cores": "4.3",
-          "spark.kubernetes.driver.limit.cores": "4.1",
           "spark.driver.memoryOverhead": "1000",
           "spark.executor.memoryOverhead": "2G",
           "spark.kubernetes.executor.podNamePrefix": "emr-eks-karpenter",
