@@ -101,7 +101,12 @@ kubectl create namespace prometheus
 #     --role-only \
 #     --approve
 
-export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
+amp=$(aws amp list-workspaces --query "workspaces[?alias=='$EKSCLUSTER_NAME'].workspaceId" --output text)
+if [ -z "$amp" ]; then
+    export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
+else
+    export WORKSPACE_ID=$amp
+fi
 export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
