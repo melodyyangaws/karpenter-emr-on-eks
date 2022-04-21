@@ -67,6 +67,17 @@ if ! [ -z "$TG" ]; then
 		aws elbv2 delete-target-group --target-group-arn $tg
 	done
 fi
+# delete cloud9
+env_ls=$(aws cloud9 list-environments --query environmentIds --output text)
+if ! [ -z "$env_ls" ]; then
+	for l in $env_ls; do
+		ts=$(aws cloud9 describe-environments --environment-ids $l --query "environments[?name=='workshop-env']")
+		if ! [ -z "$ts" ]; then
+			aws cloud9 delete-environment --environment-id $l
+		fi
+	done
+fi
+
 # delete rest of CFN
 aws cloudformation delete-stack --stack-name Karpenter-$EKSCLUSTER_NAME
 eksctl delete cluster --name $EKSCLUSTER_NAME
