@@ -12,8 +12,9 @@ cd karpenter-emr-on-eks
 export AWS_REGION=us-east-1
 ````
 
-The script installs CLI tools, creates a new EKS cluster, enables EMR on EKS, and installs Karpenter.
+The script install CLI tools, creates a new EKS cluster, enables EMR on EKS, and installs Karpenter.
 ```bash
+./install_cli.sh
 ./create-workshop-env.sh $AWS_REGION
 ```
 
@@ -21,7 +22,6 @@ The script installs CLI tools, creates a new EKS cluster, enables EMR on EKS, an
 while the workshop environment setup is still running, let's build a docker image in the ["workshop-ide" AWS Cloud9 environment](https://console.aws.amazon.com/cloud9).
 ```bash
 export AWS_REGION=us-east-1
-
 export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
 # create ECR repo

@@ -11,26 +11,6 @@ export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
 export S3TEST_BUCKET=${EMRCLUSTER_NAME}-${ACCOUNTID}-${AWS_REGION}
 
 echo "==============================================="
-echo "  install CLI tools ......"
-echo "==============================================="
-
-# Install eksctl on cloudshell
-curl -s --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-sudo mv -v /tmp/eksctl /usr/local/bin
-echo eksctl version is $(eksctl version)
-
-# Install kubectl on cloudshell
-curl -s -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-echo kubectl version is $(kubectl version --short --client)
-
-# Install helm on cloudshell
-curl -s https://get.helm.sh/helm-v3.6.3-linux-amd64.tar.gz | tar xz -C ./ &&
-    sudo mv linux-amd64/helm /usr/local/bin/helm &&
-    rm -r linux-amd64
-echo helm cli version is $(helm version --short)
-
-echo "==============================================="
 echo "  create Cloud9 IDE environment ......"
 echo "==============================================="
 aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --automatic-stop-time-minutes 60
