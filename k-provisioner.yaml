@@ -20,7 +20,7 @@ spec:
       values: ["amd64"]
     - key: "node.kubernetes.io/instance-type"
       operator: In
-      values: ["c6a.large","c5.large","r5.large","m5.large","c5.9xlarge","c5n.9xlarge","c6a.8xlarge","c6a.24xlarge","c6a.16xlarge","c6a.32xlarge"]  
+      values: ["c5.9xlarge","c5n.9xlarge","c6a.8xlarge","c6a.24xlarge","c6a.16xlarge","c6a.32xlarge"]  
     - key: "topology.kubernetes.io/zone"
       operator: In
       values: ["{AWS_REGION}a"]

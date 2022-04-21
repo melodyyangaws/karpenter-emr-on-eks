@@ -30,7 +30,7 @@ Parameters:
     Description: "AWS Systems Manager Parameter Store parameter of the AMI ID for the worker node instances. Change this value to match the version of Kubernetes you are using."
   DisableIMDSv1:
     Type: String
-    Default: "false"
+    Default: "true"
     AllowedValues:
       - "false"
       - "true"
@@ -118,22 +118,30 @@ Resources:
             Ebs:
               VolumeSize: !Ref NodeVolumeSize
               VolumeType: gp3
+              Iops: 3000
+              Throughput: 200
               DeleteOnTermination: true
           - DeviceName: /dev/xvdg
             Ebs:
               VolumeSize: !Ref NodeVolumeSize
               VolumeType: gp3
+              Iops: 3000
+              Throughput: 200
               DeleteOnTermination: true
           - DeviceName: /dev/xvdh
             Ebs:
               VolumeSize: !Ref NodeVolumeSize
               VolumeType: gp3
+              Iops: 3000
+              Throughput: 200
               DeleteOnTermination: true     
           - DeviceName: /dev/xvdi
             Ebs:
               VolumeSize: !Ref NodeVolumeSize
               VolumeType: gp3
-              DeleteOnTermination: true     
+              Iops: 3000
+              Throughput: 200
+              DeleteOnTermination: true
         SecurityGroupIds: 
           - !Ref EKSClusterSgId
         MetadataOptions:

@@ -17,13 +17,12 @@ aws emr-containers start-job-run \
       {
         "classification": "spark-defaults", 
         "properties": {
-          "spark.kubernetes.container.image":  "'$ECR_URL'/eks-spark-benchmark:emr6.5",
-          "spark.kubernetes.driver.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/driver-pod-template.yaml",
-          "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/executor-pod-template.yaml",
-
           "spark.kubernetes.node.selector.app": "caspark",
           "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'${AWS_REGION}'b",
 
+          "spark.kubernetes.container.image":  "'$ECR_URL'/eks-spark-benchmark:emr6.5",
+          "spark.kubernetes.driver.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/driver-pod-template.yaml",
+          "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/executor-pod-template.yaml",
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
           "spark.kubernetes.executor.limit.cores": "4.3",

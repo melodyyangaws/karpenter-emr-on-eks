@@ -49,6 +49,28 @@ managedNodeGroups:
       # required for cluster-autoscaler auto-discovery
       k8s.io/cluster-autoscaler/enabled: "true"
       k8s.io/cluster-autoscaler/{EKSCLUSTER_NAME}: "owned"
+    additionalVolumes:
+      - volumeName: '/dev/xvdf'
+        volumeSize: 50
+        volumeType: 'gp3'
+        volumeIOPS: 3000
+        volumeThroughput: 200
+      - volumeName: '/dev/xvdg'
+        volumeSize: 50
+        volumeType: 'gp3'
+        volumeIOPS: 3000
+        volumeThroughput: 200
+      - volumeName: '/dev/xvdh'
+        volumeSize: 50
+        volumeType: 'gp3'
+        volumeIOPS: 3000
+        volumeThroughput: 200
+      - volumeName: '/dev/xvdi'
+        volumeSize: 50
+        volumeType: 'gp3'
+        volumeIOPS: 3000
+        volumeThroughput: 200
+
 cloudWatch: 
  clusterLogging:
    enableTypes: ["*"]
