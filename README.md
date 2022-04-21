@@ -15,7 +15,7 @@ export AWS_REGION=us-east-1
 The script install CLI tools, creates a new EKS cluster, enables EMR on EKS, and installs Karpenter.
 ```bash
 ./install_cli.sh
-./create-workshop-env.sh $AWS_REGION
+./provision/create-workshop-env.sh $AWS_REGION
 ```
 
 ## 2. Build a custom docker image
@@ -68,7 +68,7 @@ Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/clou
 
 ```bash
 sudo yum install -y openssl
-./create-studio-endpoint.sh
+./provision/create-studio-endpoint.sh
 ````
 
 ## 5. Clean up

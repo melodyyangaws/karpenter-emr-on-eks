@@ -83,10 +83,10 @@ fi
 echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="
-sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' ekscluster-config.yaml
-sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' ekscluster-config.yaml
-sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' ekscluster-config.yaml
-eksctl create cluster -f ekscluster-config.yaml
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' provision/ekscluster-config.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' provision/ekscluster-config.yaml
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' provision/ekscluster-config.yaml
+eksctl create cluster -f provision/ekscluster-config.yaml
 aws eks update-kubeconfig --name $EKSCLUSTER_NAME --region $AWS_REGION
 
 echo "==============================================="
@@ -108,7 +108,7 @@ API_SERVER=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER
 B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text)
 aws cloudformation deploy \
     --stack-name Karpenter-${EKSCLUSTER_NAME} \
-    --template-file karpenter-cfn.yaml \
+    --template-file karpenter/karpenter-cfn.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
 
@@ -133,9 +133,9 @@ helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --ver
     --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER} \
     --debug
 
-sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' k-provisioner.yaml
-sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' k-provisioner.yaml
-kubectl apply -f k-provisioner.yaml
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' karpenter/k-provisioner.yaml
+sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' karpenter/k-provisioner.yaml
+kubectl apply -f karpenter/k-provisioner.yaml
 
 echo "====================================================="
 echo "  Install Prometheus to EKS for monitroing ......"

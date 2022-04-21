@@ -22,57 +22,12 @@ aws iam create-role --role-name $STUDIO_SERVICE_ROLE --assume-role-policy-docume
 aws iam attach-role-policy --role-name $STUDIO_SERVICE_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_SERVICE_ROLE-policy
 
 export STUDIO_USER_ROLE=${EMRCLUSTER_NAME}-StudioUserRole
-cat >/tmp/studio-userrole-policy.json <<EOL
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Action": [
-                "secretsmanager:CreateSecret",
-                "secretsmanager:ListSecrets",
-                "emr-containers:DescribeVirtualCluster",
-                "emr-containers:ListVirtualClusters",
-                "emr-containers:DescribeManagedEndpoint",
-                "emr-containers:ListManagedEndpoints",
-                "emr-containers:CreateAccessTokenForManagedEndpoint",
-                "emr-containers:DescribeJobRun",
-                "emr-containers:ListJobRuns"
-            ],
-            "Resource": "*",
-            "Effect": "Allow",
-            "Sid": "AllowBasicActions"
-        },
-        {
-            "Action": "iam:PassRole",
-            "Resource": "arn:aws:iam::$ACCOUNTID:role/$STUDIO_SERVICE_ROLE",
-            "Effect": "Allow",
-            "Sid": "PassRolePermission"
-        },
-        {
-            "Action": [
-                "s3:ListAllMyBuckets",
-                "s3:ListBucket",
-                "s3:GetBucketLocation"
-            ],
-            "Resource": "arn:aws:s3:::*",
-            "Effect": "Allow",
-            "Sid": "S3ListPermission"
-        },
-        {
-            "Action": "s3:GetObject",
-            "Resource": [
-                "arn:aws:s3:::${S3BUCKET}/*",
-                "arn:aws:s3:::nyc-tlc/*",
-                "arn:aws:s3:::aws-logs-$ACCOUNTID-$AWS_REGION/elasticmapreduce/*"
-            ],
-            "Effect": "Allow",
-            "Sid": "S3GetObjectPermission"
-        }
-    ]
-}
-EOL
-aws iam create-policy --policy-name $STUDIO_USER_ROLE-policy --policy-document file:///tmp/studio-userrole-policy.json
-aws iam create-role --role-name $STUDIO_USER_ROLE --assume-role-policy-document file:///tmp/studio-trust-policy.json
+sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' iam/studio-userrole-policy.json
+sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' iam/studio-userrole-policy.json
+sed -i -- 's/{S3BUCKET}/'$S3BUCKET'/g' iam/studio-userrole-policy.json
+sed -i -- 's/{STUDIO_SERVICE_ROLE}/'$STUDIO_SERVICE_ROLE'/g' iam/studio-userrole-policy.json
+aws iam create-policy --policy-name $STUDIO_USER_ROLE-policy --policy-document file://iam/studio-userrole-policy.json
+aws iam create-role --role-name $STUDIO_USER_ROLE --assume-role-policy-document file://iam/studio-trust-policy.json
 aws iam attach-role-policy --role-name $STUDIO_USER_ROLE --policy-arn arn:aws:iam::$ACCOUNTID:policy/$STUDIO_USER_ROLE-policy
 
 echo "==============================================="
