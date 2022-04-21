@@ -19,9 +19,13 @@ The script install CLI tools, creates a new EKS cluster, enables EMR on EKS, and
 ```
 
 ## 2. Build a custom docker image
-while the workshop environment setup is still running, let's build a docker image in the ["workshop-ide" AWS Cloud9 environment](https://console.aws.amazon.com/cloud9).
+While the environment setup is still running, let's build a docker image via the ["workshop-ide" in AWS Cloud9](https://console.aws.amazon.com/cloud9).
 ```bash
+export ACCOUNTID=$(aws sts get-caller-identity --query Account --output text)
+export AWS_REGION=$(curl http://169.254.169.254/latest/meta-data/placement/region)
 export ECR_URL="$ACCOUNTID.dkr.ecr.$AWS_REGION.amazonaws.com"
+# remove existing images to save disk space
+docker rmi $(docker images -a | awk {'print $3'}) -f
 # create ECR repo
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 aws ecr create-repository --repository-name eks-spark-benchmark --image-scanning-configuration scanOnPush=true

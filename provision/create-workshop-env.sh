@@ -20,7 +20,8 @@ source ~/.bash_profile
 echo "==============================================="
 echo "  create Cloud9 IDE environment ......"
 echo "==============================================="
-aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --automatic-stop-time-minutes 60
+subnetid=$(aws ec2 describe-subnets --filters Name=tag:karpenter.sh/discovery,Values=$EKSCLUSTER_NAME Name=tag:kubernetes.io/role/elb,Values=1 --query "Subnets[].SubnetId" --output text | cut -f1)
+aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --subnet-id $subnetid
 
 # create S3 bucket for application
 aws s3 mb s3://$S3BUCKET --region $AWS_REGION
@@ -73,7 +74,7 @@ EOL
 aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file://iam/grafana-prometheus-policy.json
 aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document file:///tmp/grafana-prometheus-trust-policy.json
 aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
-ws=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id")
+ws=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id" --output text)
 if [ -z "$ws" ]; then
     aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
         --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
@@ -130,8 +131,7 @@ eksctl create iamserviceaccount \
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 helm repo add karpenter https://charts.karpenter.sh
 helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.8.1 \
-    --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER} \
-    --debug
+    --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER}
 
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' karpenter/k-provisioner.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' karpenter/k-provisioner.yaml
@@ -152,6 +152,7 @@ amp=$(aws amp list-workspaces --query "workspaces[?alias=='$EKSCLUSTER_NAME'].wo
 if [ -z "$amp" ]; then
     export WORKSPACE_ID=$(aws amp create-workspace --alias $EKSCLUSTER_NAME --query workspaceId --output text)
 else
+    echo "a proemetheus workspace exists..."
     export WORKSPACE_ID=$amp
 fi
 export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
@@ -163,7 +164,7 @@ sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
 sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
-helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml --debug
+helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml
 
 echo "==============================================="
 echo "  Enable EMR on EKS ......"
