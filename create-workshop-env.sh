@@ -52,7 +52,7 @@ export GRA_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
 cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
 {
     "Version": "2012-10-17",
-    "Statement": [ 
+    "Statement": [
     {
         "Effect": "Allow",
         "Principal": {

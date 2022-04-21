@@ -18,7 +18,7 @@ aws emr-containers start-job-run \
         "classification": "spark-defaults",
         "properties": {
           "spark.kubernetes.node.selector.app": "caspark",
-          "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'AWS_REGION'b",
+          "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'${AWS_REGION}'b",
 
           "spark.ui.prometheus.enabled":"true",
           "spark.executor.processTreeMetrics.enabled":"true",

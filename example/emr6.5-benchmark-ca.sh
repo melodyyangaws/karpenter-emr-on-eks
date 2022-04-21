@@ -22,7 +22,7 @@ aws emr-containers start-job-run \
           "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/app_code/pod-template/executor-pod-template.yaml",
 
           "spark.kubernetes.node.selector.app": "caspark",
-          "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'AWS_REGION'b",
+          "spark.kubernetes.node.selector.topology.kubernetes.io/zone": "'${AWS_REGION}'b",
 
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
