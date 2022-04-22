@@ -1,6 +1,6 @@
 ## EMR on EKS: High performance autoscaling with Karpenter
 
-This repository provides source code for the Karpenter workshop with EMR on EKS. All the scripts are designed to run in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1), but docker related commands should run in [AWS Cloud9 IDE environment](https://console.aws.amazon.com/cloud9).
+This repository provides source code for the Karpenter workshop with EMR on EKS. All the scripts are designed to run in [AWS CloudShell](https://aws.amazon.com/cloudshell/), but docker related commands should run in [AWS Cloud9 IDE environment](https://console.aws.amazon.com/cloud9).
 
 ## 1. Infrastructure setup
 
@@ -67,7 +67,7 @@ cd karpenter-emr-on-eks
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-## 4. Setup EMR studio with EMR on EKS
+## 4. Setup EMR studio with EMR on EKS (WIP)
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
 
 ```bash

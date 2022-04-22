@@ -10,7 +10,7 @@ aws emr-containers start-job-run \
   "sparkSubmitJobDriver": {
     "entryPoint": "s3://'$AWS_REGION'.elasticmapreduce/emr-containers/samples/wordcount/scripts/wordcount.py",
     "entryPointArguments": ["s3://'${S3BUCKET}'/wordcount_output_ca"],
-    "sparkSubmitParameters": "--conf spark.executor.instances=2 --conf spark.executor.memory=2G --conf spark.executor.cores=2"
+    "sparkSubmitParameters": "--conf spark.executor.instances=2 --conf spark.executor.memory=2G --conf spark.executor.cores=2 --conf spark.driver.cores=1"
   }}' \
   --configuration-overrides '{
   "applicationConfiguration": [

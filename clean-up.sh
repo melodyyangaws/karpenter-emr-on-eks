@@ -22,10 +22,6 @@ aws iam detach-role-policy --role-name $G_ROLE_NAME --policy-arn $G_POLICY_ARN
 aws iam delete-role --role-name $G_ROLE_NAME
 aws iam delete-policy --policy-arn $G_POLICY_ARN
 
-# delete EMR virtual cluster & EKS cluster
-export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '${EMRCLUSTER_NAME}' && state == 'RUNNING'].id" --output text)
-aws emr-containers delete-virtual-cluster --id $VIRTUAL_CLUSTER_ID
-
 # delete S3
 aws s3 rm s3://$S3BUCKET --recursive
 aws s3api delete-bucket --bucket $S3BUCKET
@@ -77,7 +73,10 @@ if ! [ -z "$env_ls" ]; then
 		fi
 	done
 fi
-
-# delete rest of CFN
+# delete karpenter
 aws cloudformation delete-stack --stack-name Karpenter-$EKSCLUSTER_NAME
+# delete EKS cluster
 eksctl delete cluster --name $EKSCLUSTER_NAME
+# delete EMR virtual cluster & EKS cluster
+export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '${EMRCLUSTER_NAME}' && state == 'RUNNING'].id" --output text)
+aws emr-containers delete-virtual-cluster --id $VIRTUAL_CLUSTER_ID
