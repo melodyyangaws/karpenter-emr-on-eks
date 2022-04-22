@@ -17,7 +17,7 @@ spec:
       values: ["on-demand","spot"]
     - key: "kubernetes.io/arch" 
       operator: In
-      values: ["amd64","arm64"]
+      values: ["amd64"]
     - key: "node.kubernetes.io/instance-type"
       operator: In
       values: ["c5d.9xlarge","c5ad.12xlarge","c5ad.16xlarge","c5d.12xlarge","c6gd.12xlarge","c6gd.16xlarge","m5ad.12xlarge","m5d.12xlarge","m6gd.12xlarge","m6gd.16xlarge","r6gd.12xlarge"]  

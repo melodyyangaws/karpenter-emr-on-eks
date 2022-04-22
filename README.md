@@ -1,6 +1,6 @@
 ## EMR on EKS: High performance autoscaling with Karpenter
 
-This repository provides source code for the Karpenter workshop with EMR on EKS. For the workshop purpose, we will run Karpenter in AZ-a, and Cluster Autoscaler in AZ-b. Each jobs will be submitted twice, ie. one per AZ. 
+This repository provides source code for the Karpenter workshop with EMR on EKS. For the workshop purpose, we will run Karpenter in AZ-a, and Cluster Autoscaler in AZ-b. Each job will be submitted twice, ie. one per AZ. However, this is not a recommended design for a real-world workload.
 
 See the reference architecture as below:
 
