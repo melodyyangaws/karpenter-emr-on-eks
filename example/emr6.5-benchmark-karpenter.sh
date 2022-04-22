@@ -43,4 +43,6 @@ aws emr-containers start-job-run \
           "spark.metrics.conf.master.sink.prometheusServlet.path":"/metrics/master/prometheus/",
           "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/"
          }}
-    ]}'
+    ],
+    "monitoringConfiguration": {
+      "s3MonitoringConfiguration": {"logUri": "s3://'$S3BUCKET'/elasticmapreduce/emr-containers"}}}'

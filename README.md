@@ -1,6 +1,10 @@
 ## EMR on EKS: High performance autoscaling with Karpenter
 
-This repository provides source code for the Karpenter workshop with EMR on EKS. All the scripts are designed to run in [AWS CloudShell](https://aws.amazon.com/cloudshell/), but docker related commands should run in [AWS Cloud9 IDE environment](https://console.aws.amazon.com/cloud9).
+This repository provides source code for the Karpenter workshop with EMR on EKS. For the workshop purpose, we will run Karpenter in AZ-a, and Cluster Autoscaler in AZ-b. Each jobs will be submitted twice, ie. one per AZ. 
+
+See the reference architecture as below:
+
+![](/workshop-diagram.png)
 
 ## 1. Infrastructure setup
 
@@ -44,21 +48,21 @@ To analyse the autoscaling perforamcne, we use [Amazon Managed Service for Prome
 
 To monitor the autoscaling status in real time, go back to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" dropdown button -> select "Split into rows" twice. Note the default region is `us-east-1`. Change it to a different region if your infra setup wasn't in the default one.
 
-Run the command to monitor your Spark pods in one of windows (the screen could be empty at the start):
+Watch job pods autoscaling status in a command line window (nothing returns at the beginning):
 ```bash
-watch "kubectl get pod -n emr"
+watch -n1 "kubectl get pod -n emr"
 ```
-Run the command in a 2nd window:
+Monitor EC2 instance autoscaling status in a 2nd window. Empty "CAPACITY-TYPE" means the autoscaling was scheduled by Cluster Autoscaler, otherwise by Karpenter.
 ```bash
-watch "kubectl get node --label-columns=node.kubernetes.io/instance-type,topology.kubernetes.io/zone,karpenter.sh/capacity-type"
+watch -n1 "kubectl get node --label-columns=node.kubernetes.io/instance-type,topology.kubernetes.io/zone,karpenter.sh/capacity-type"
 ```
-Submit samples Spark jobs in a 3rd window:
-
+Submit jobs in a 3rd window. The suffix 'ca' represents Cluster Autoscaler.
 ```bash
 cd karpenter-emr-on-eks
+./install_cli.sh
 ```
 ```bash
-# small job with 2 executors. suffix 'ca' represents the original autoscaling tool Cluster Autoscaler.
+# small job with 2 executors
 ./example/sample-job-ca.sh
 ./example/sample-job-karpenter.sh
 ```
@@ -67,7 +71,7 @@ cd karpenter-emr-on-eks
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-## 4. Setup EMR studio with EMR on EKS (WIP)
+## 4. Setup EMR studio with EMR on EKS (coming soon)
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
 
 ```bash
