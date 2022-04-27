@@ -22,11 +22,11 @@ aws iam detach-role-policy --role-name $G_ROLE_NAME --policy-arn $G_POLICY_ARN
 aws iam delete-role --role-name $G_ROLE_NAME
 aws iam delete-policy --policy-arn $G_POLICY_ARN
 
-# delete S3
+echo "delete S3"
 aws s3 rm s3://$S3BUCKET --recursive
 aws s3api delete-bucket --bucket $S3BUCKET
 
-# delete Grafana workspace
+echo "delete Grafana workspace"
 WID=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id" --output text)
 if ! [ -z "$WID" ]; then
 	for id in $WID; do
@@ -35,7 +35,7 @@ if ! [ -z "$WID" ]; then
 		aws grafana delete-workspace --workspace-id $id
 	done
 fi
-# delete Prometheus worksapce
+echo "delete Prometheus worksapce"
 PID=$(aws amp list-workspaces --alias $EKSCLUSTER_NAME --query workspaces[].workspaceId --output text)
 if ! [ -z "$PID" ]; then
 	for id in $PID; do
@@ -45,7 +45,7 @@ if ! [ -z "$PID" ]; then
 	done
 fi
 
-# delete ALB
+echo "delete ALB"
 vpcId=$(aws ec2 describe-vpcs --filters Name=tag:"karpenter.sh/discovery",Values=$EKSCLUSTER_NAME --query "Vpcs[*].VpcId" --output text)
 ALB=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?VpcId=='$vpcId'].LoadBalancerArn" --output text)
 if ! [ -z "$ALB" ]; then
@@ -73,10 +73,10 @@ if ! [ -z "$env_ls" ]; then
 		fi
 	done
 fi
-# delete karpenter
+echo "delete karpenter"
 aws cloudformation delete-stack --stack-name Karpenter-$EKSCLUSTER_NAME
-# delete EKS cluster
+echo "delete EKS cluster"
 eksctl delete cluster --name $EKSCLUSTER_NAME
-# delete EMR virtual cluster & EKS cluster
+echo "delete EMR virtual cluster"
 export VIRTUAL_CLUSTER_ID=$(aws emr-containers list-virtual-clusters --query "virtualClusters[?name == '${EMRCLUSTER_NAME}' && state == 'RUNNING'].id" --output text)
 aws emr-containers delete-virtual-cluster --id $VIRTUAL_CLUSTER_ID
