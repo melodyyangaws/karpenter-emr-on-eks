@@ -11,7 +11,7 @@ vpc:
   clusterEndpoints:
       publicAccess: true
       privateAccess: true  
-availabilityZones: ["{AWS_REGION}a","{AWS_REGION}b"]
+availabilityZones: ["{AWS_REGION}a","{AWS_REGION}b","{AWS_REGION}c"]
 # IRSA setup
 iam:
   withOIDC: true

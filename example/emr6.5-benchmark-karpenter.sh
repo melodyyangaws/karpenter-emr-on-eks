@@ -29,6 +29,7 @@ aws emr-containers start-job-run \
           "spark.executor.memoryOverhead": "2G",
           "spark.kubernetes.executor.podNamePrefix": "emr-eks-karpenter",
           "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
+          "spark.driver.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
 
           "spark.ui.prometheus.enabled":"true",
           "spark.executor.processTreeMetrics.enabled":"true",

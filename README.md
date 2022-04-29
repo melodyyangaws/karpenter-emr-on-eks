@@ -61,6 +61,10 @@ Submit jobs in a 3rd window. The suffix 'ca' represents Cluster Autoscaler.
 cd karpenter-emr-on-eks
 ./install_cli.sh
 ```
+We will submit two types of Spark workloads:
+- [a small wordcount app with 2 executors](example/sample-job-karpenter.sh): read from EMR on EKS sample S3 bucket and output to your newly created S3 bucket.
+- [a Spark benchmark job requesting 47 executors](example/emr6.5-benchmark-karpenter.sh): source data is in `us-east-1` and output the benchmark result to your S3. 
+
 ```bash
 # small job with 2 executors
 ./example/sample-job-ca.sh
@@ -71,13 +75,22 @@ cd karpenter-emr-on-eks
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-## 4. Setup EMR studio with EMR on EKS (coming soon)
+Note down each job's ID returned from the job submissions so we can check the autoscaling performance in a Grafana dashboard.
+
+## 4. Validate in Grafana Dashboard
+Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), open the EMR on EKS dashboard created earlier.
+
+Expand the first report `Pod State Timelines`, choose different job ids (EMR on EKS job ID) in the Job ID dropdown, and observe the spin-up performance for each Spark jobs. 
+
+To learn how to read the graph, check out the `Appendix section` at the end of the [Grafana instruction document](./setup_grafana_dashboard.pdf).
+
+<!-- ## 5. Setup EMR studio with EMR on EKS (coming soon)
 Run the script in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1).
 
 ```bash
 sudo yum install -y openssl
 ./provision/create-studio-endpoint.sh
-````
+```` -->
 
 ## 5. Clean up
 ```bash

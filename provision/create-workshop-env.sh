@@ -49,44 +49,6 @@ aws iam create-policy --policy-name $ROLE_NAME-policy --policy-document file://i
 aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file:///tmp/trust-policy.json
 aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$ROLE_NAME-policy
 
-# echo "==============================================="
-# echo "  Create Grafana Prometheus Service Role ......"
-# echo "==============================================="
-# # the role is not needed if we create a grafana from the console.
-# export GRA_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
-# cat >/tmp/grafana-prometheus-trust-policy.json <<EOL
-# {
-#     "Version": "2012-10-17",
-#     "Statement": [
-#     {
-#         "Effect": "Allow",
-#         "Principal": {
-#             "Service": "grafana.amazonaws.com"
-#         },
-#         "Action": "sts:AssumeRole",
-#         "Condition": {
-#             "StringEquals": {
-#                 "aws:SourceAccount": "$ACCOUNTID"
-#             },
-#             "StringLike": {
-#                 "aws:SourceArn": "arn:aws:grafana:$AWS_REGION:$ACCOUNTID:/workspaces/*"
-#             }
-#         }
-#     }]
-# }
-# EOL
-# aws iam create-policy --policy-name $GRA_ROLE_NAME-policy --policy-document file://iam/grafana-prometheus-policy.json
-# aws iam create-role --role-name $GRA_ROLE_NAME --assume-role-policy-document file:///tmp/grafana-prometheus-trust-policy.json
-# aws iam attach-role-policy --role-name $GRA_ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNTID:policy/$GRA_ROLE_NAME-policy
-# SSO need to be enabled before hand
-# ws=$(aws grafana list-workspaces --query "workspaces[?name=='$EMRCLUSTER_NAME'].id" --output text)
-# if [ -z "$ws" ]; then
-#     echo "Creating a new grafana workspace..."
-#     aws grafana create-workspace --account-access-type CURRENT_ACCOUNT --authentication-providers AWS_SSO \
-#         --permission-type SERVICE_MANAGED --workspace-data-sources PROMETHEUS --workspace-name $EMRCLUSTER_NAME \
-#         --workspace-role-arn "arn:aws:iam::${ACCOUNTID}:role/$GRA_ROLE_NAME"
-# fi
-
 echo "==============================================="
 echo "  Create EKS Cluster ......"
 echo "==============================================="

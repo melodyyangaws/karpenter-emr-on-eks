@@ -3,24 +3,18 @@
 # SPDX-FileCopyrightText: Copyright 2021 Amazon.com, Inc. or its affiliates.
 # SPDX-License-Identifier: MIT-0
 
-# delete EMR on EKS IAM role & policy
+echo "delete EMR on EKS IAM execution role "
 export ROLE_NAME=${EMRCLUSTER_NAME}-execution-role
 export POLICY_ARN=arn:aws:iam::$ACCOUNTID:policy/${ROLE_NAME}-policy
 aws iam detach-role-policy --role-name $ROLE_NAME --policy-arn $POLICY_ARN
 aws iam delete-role --role-name $ROLE_NAME
 aws iam delete-policy --policy-arn $POLICY_ARN
-# delete Karpenter role
+echo "delete Karpenter role"
 export K_ROLE_NAME=${EKSCLUSTER_NAME}-karpenter
 export K_POLICY_ARN=arn:aws:iam::$ACCOUNTID:policy/KarpenterControllerPolicy-${EKSCLUSTER_NAME}
 aws iam detach-role-policy --role-name $K_ROLE_NAME --policy-arn $K_POLICY_ARN
 aws iam delete-role --role-name $K_ROLE_NAME
 aws iam delete-policy --policy-arn $K_POLICY_ARN
-# delete Grafana role & policy
-export G_ROLE_NAME=${EMRCLUSTER_NAME}-grafana-prometheus-servicerole
-export G_POLICY_ARN=arn:aws:iam::$ACCOUNTID:policy/${G_ROLE_NAME}-policy
-aws iam detach-role-policy --role-name $G_ROLE_NAME --policy-arn $G_POLICY_ARN
-aws iam delete-role --role-name $G_ROLE_NAME
-aws iam delete-policy --policy-arn $G_POLICY_ARN
 
 echo "delete S3"
 aws s3 rm s3://$S3BUCKET --recursive

@@ -5,10 +5,19 @@ metadata:
   namespace: karpenter
 spec:
   provider:
-    # instanceProfile: KarpenterNodeInstanceProfile-{EKSCLUSTER_NAME}
-    launchTemplate: {EKSCLUSTER_NAME}-karpenter-launchtemplate
+    instanceProfile: KarpenterNodeInstanceProfile-{EKSCLUSTER_NAME}
+    # launchTemplate: {EKSCLUSTER_NAME}-karpenter-launchtemplate
     subnetSelector:
       karpenter.sh/discovery: {EKSCLUSTER_NAME}
+    securityGroupSelector:
+      karpenter.sh/discovery: {EKSCLUSTER_NAME}
+    blockDeviceMappings:
+      - deviceName: /dev/xvda
+        ebs:
+          volumeSize: 128Gi
+          volumeType: io2
+          iops: 64000
+          deleteOnTermination: true
   labels:
     app: kspark
   requirements:
