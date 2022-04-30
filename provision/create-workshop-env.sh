@@ -71,15 +71,12 @@ echo "  Install Karpenter to EKS ......"
 echo "==============================================="
 # kubectl create namespace karpenter
 # create IAM role and launch template
-CONTROLPLANE_SG=$(aws eks describe-cluster --name $EKSCLUSTER_NAME --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text)
-DNS_IP=$(kubectl get svc -n kube-system | grep kube-dns | awk '{print $3}')
 API_SERVER=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.endpoint' --output text)
-B64_CA=$(aws eks describe-cluster --region ${AWS_REGION} --name ${EKSCLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text)
 aws cloudformation deploy \
     --stack-name Karpenter-${EKSCLUSTER_NAME} \
     --template-file karpenter/karpenter-cfn.yaml \
     --capabilities CAPABILITY_NAMED_IAM \
-    --parameter-overrides "ClusterName=$EKSCLUSTER_NAME" "EKSClusterSgId=$CONTROLPLANE_SG" "APIServerURL=$API_SERVER" "B64ClusterCA=$B64_CA" "EKSDNS=$DNS_IP"
+    --parameter-overrides "ClusterName=$EKSCLUSTER_NAME"
 
 eksctl create iamidentitymapping \
     --username system:node:{{EC2PrivateDNSName}} \
@@ -99,7 +96,8 @@ eksctl create iamserviceaccount \
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 helm repo add karpenter https://charts.karpenter.sh
 helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.8.1 \
-    --set serviceAccount.create=false --set serviceAccount.name=karpenter --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER}
+    --set serviceAccount.create=false --set serviceAccount.name=karpenter --set nodeSelector.app=ops \
+    --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER}
 
 sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' karpenter/k-provisioner.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' karpenter/k-provisioner.yaml
@@ -134,6 +132,8 @@ sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
 helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml
+
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
 echo "==============================================="
 echo "  Enable EMR on EKS ......"

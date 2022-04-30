@@ -32,24 +32,31 @@ iam:
     roleName: {EKSCLUSTER_NAME}-prometheus-ingest 
     roleOnly: true
 managedNodeGroups:
-  - name: {EKSCLUSTER_NAME}-ng
-    instanceType: c5d.9xlarge
+  - name: {EKSCLUSTER_NAME}-ops
+    instanceTypes: ["c4.large", "c5.large"]
+    volumeSize: 200
+    volumeType: io1
+    volumeIOPS: 6400
+    desiredCapacity: 1
+    labels:
+      app: ops
+  - name: {EKSCLUSTER_NAME}-spot
+    spot: true
+    instanceTypes: ["r4.4xlarge","c5.4xlarge","c5a.4xlarge","c5n.4xlarge","c5.9xlarge","c5a.8xlarge","c5n.9xlarge","m5a.4xlarge","m5.4xlarge","m5n.4xlarge","r5a.4xlarge","r5.4xlarge","r5n.4xlarge"]
     availabilityZones: ["{AWS_REGION}b"] 
-    preBootstrapCommands:
-      - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
-      - "sudo mount -a"
-      - "sudo chown ec2-user:ec2-user /local*"
-    volumeSize: 20
+    volumeSize: 200
+    volumeType: io1
+    volumeIOPS: 6400
     minSize: 1
     desiredCapacity: 1
-    maxSize: 30
+    maxSize: 50
+    # disableIMDSv1: true
     labels:
       app: caspark
     tags:
       # required for cluster-autoscaler auto-discovery
       k8s.io/cluster-autoscaler/enabled: "true"
       k8s.io/cluster-autoscaler/{EKSCLUSTER_NAME}: "owned"
-
 cloudWatch: 
  clusterLogging:
    enableTypes: ["*"]

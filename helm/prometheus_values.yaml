@@ -9,9 +9,13 @@ server:
       sigv4:
         region: {AWS_REGION}
       queue_config:
-        max_samples_per_send: 1000
+        max_samples_per_send: 3000
+        batch_send_deadline: 10s
+        min_shards: 4
         max_shards: 200
-        capacity: 2500
-nodeSelector:        
-  topology.kubernetes.io/zone: "{AWS_REGION}a"
-  app: kspark
+        capacity: 10000
+  nodeSelector:
+    app: kspark
+    karpenter.sh/capacity-type: on-demand
+alertmanager:
+  enabled: false

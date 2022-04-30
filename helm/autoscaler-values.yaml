@@ -4,7 +4,7 @@ awsRegion: {AWS_REGION}
 image:
     tag: v1.21.1
 nodeSelector:
-    app: caspark
+    app: ops
 podAnnotations:
     cluster-autoscaler.kubernetes.io/safe-to-evict: 'false'
 extraArgs:
