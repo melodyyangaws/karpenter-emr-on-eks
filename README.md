@@ -58,8 +58,8 @@ watch -n1 "kubectl get node --label-columns=node.kubernetes.io/instance-type,kar
 ```
 Submit jobs in a 3rd window. The suffix 'ca' represents Cluster Autoscaler. 
 We take two types of Spark workloads for example:
-- [wordcount app with 2 executors](example/sample-job-karpenter.sh): read from EMR on EKS sample S3 bucket and output to your newly created S3 bucket.
-- [Spark benchmark job requesting 47 executors](example/emr6.5-benchmark-karpenter.sh): source data is in `us-east-1` and output Spark benchmark result to your S3. 
+- [wordcount app with 2 executors](example/sample-job-karpenter.sh): read from EMR on EKS sample S3 bucket in your region and output the newly created S3 bucket.
+- [SparkSQL benchmark app with 47 executors](example/emr6.5-benchmark-karpenter.sh): source data is in `us-east-1` and the benchmark result will output to a newly created S3.
 ```bash
 cd karpenter-emr-on-eks
 ./install_cli.sh
@@ -74,7 +74,12 @@ cd karpenter-emr-on-eks
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-To check the autoscaling performance in Grafana, we need job ids returned from the above submissions, or locate the id from [EMR console](https://us-east-1.console.aws.amazon.com/elasticmapreduce/home?region=us-east-1#virtual-cluster-list:).
+```bash
+# submit more time, force to exeed the max Spot instance quota and see what will happen
+./example/emr6.5-benchmark-ca.sh
+./example/emr6.5-benchmark-karpenter.sh
+```
+To check the autoscaling performance in Grafana, we need job ids returned from the above submissions, or locate them from your [EMR console](https://us-east-1.console.aws.amazon.com/elasticmapreduce/home?region=us-east-1#virtual-cluster-list:).
 
 ## 4. Validate in Grafana Dashboard
 Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), open the EMR on EKS dashboard created earlier.

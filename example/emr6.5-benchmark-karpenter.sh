@@ -28,15 +28,10 @@ aws emr-containers start-job-run \
           "spark.kubernetes.executor.limit.cores": "4.3",
           "spark.kubernetes.driver.limit.cores": "4.1",
           "spark.driver.memoryOverhead": "1000",
-          "spark.executor.memoryOverhead": "2G",
+          "spark.executor.memoryOverhead": "3G",
           "spark.kubernetes.executor.podNamePrefix": "emr-eks-karpenter",
           "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
           "spark.driver.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
-
-          "spark.decommission.enabled": "true",
-          "spark.storage.decommission.rddBlocks.enabled": "true",
-          "spark.storage.decommission.shuffleBlocks.enabled" : "true",
-          "spark.storage.decommission.enabled": "true",
 
           "spark.ui.prometheus.enabled":"true",
           "spark.executor.processTreeMetrics.enabled":"true",
