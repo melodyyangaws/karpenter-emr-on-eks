@@ -25,7 +25,10 @@ aws emr-containers start-job-run \
           "spark.kubernetes.executor.podTemplateFile": "s3://'$S3BUCKET'/pod-template/executor-pod-template.yaml",
           "spark.network.timeout": "2000s",
           "spark.executor.heartbeatInterval": "300s",
-          "spark.kubernetes.memoryOverheadFactor": "0.34",
+          "spark.kubernetes.executor.limit.cores": "4.3",
+          "spark.kubernetes.driver.limit.cores": "4.1",
+          "spark.driver.memoryOverhead": "1000",
+          "spark.executor.memoryOverhead": "2G",
           "spark.kubernetes.executor.podNamePrefix": "emr-eks-karpenter",
           "spark.executor.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
           "spark.driver.defaultJavaOptions": "-verbose:gc -XX:+UseParallelGC -XX:InitiatingHeapOccupancyPercent=70",
@@ -48,4 +51,6 @@ aws emr-containers start-job-run \
           "spark.metrics.conf.master.sink.prometheusServlet.path":"/metrics/master/prometheus/",
           "spark.metrics.conf.applications.sink.prometheusServlet.path":"/metrics/applications/prometheus/"
          }}
-    ]}'
+    ],
+    "monitoringConfiguration": {
+      "s3MonitoringConfiguration": {"logUri": "s3://'$S3BUCKET'/elasticmapreduce/emr-containers"}}}'

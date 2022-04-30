@@ -46,13 +46,13 @@ To analyse the autoscaling perforamcne, we use [Amazon Managed Service for Prome
 
 **Follow the [grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready.**
 
-To monitor the autoscaling status in real time, go to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" button -> select "New tab" twice. Note the default region is `us-east-1`. Change it to a different region if your infra setup wasn't in the default one.
+To monitor the autoscaling status in real time, go to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" button -> select the "New tab" twice. Note the default region is `us-east-1`. Change it to a different region if your infra setup wasn't in the default one.
 
-Watch job pod's autoscaling status in a command line window (nothing returns at the start):
+Watch a job pod's autoscaling status in a command line window (nothing returns at the start):
 ```bash
 watch -n1 "kubectl get pod -n emr"
 ```
-Observe EC2 autoscaling status in a 2nd tab. The ZONE "b" EC2/node was scheduled by Cluster Autoscaler, otherwise by Karpenter.
+Observe EC2 autoscaling status in a 2nd tab. By default, the ZONE "b" EC2/node was scheduled by Cluster Autoscaler, and ZONE "a" node was created by Karpenter.
 ```bash
 watch -n1 "kubectl get node --label-columns=node.kubernetes.io/instance-type,karpenter.sh/capacity-type,eks.amazonaws.com/capacityType,topology.kubernetes.io/zone,app"
 ```
