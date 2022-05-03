@@ -41,7 +41,7 @@ managedNodeGroups:
       app: ops
   - name: {EKSCLUSTER_NAME}-spot
     spot: true
-    instanceTypes: ["r4.4xlarge","c5.4xlarge","c5a.4xlarge","c5n.4xlarge","c5.9xlarge","c5a.8xlarge","c5n.9xlarge","m5a.4xlarge","m5.4xlarge","r5a.4xlarge","r5.4xlarge","r5n.4xlarge"]
+    instanceTypes: ["c5.2xlarge","c5a.2xlarge","c5n.2xlarge","c5.4xlarge","c5a.4xlarge","c5n.4xlarge","m5a.2xlarge","m5n.2xlarge","m5zn.3xlarge","m5.2xlarge","m5a.4xlarge","m5.4xlarge","m5n.4xlarge"]
     availabilityZones: ["{AWS_REGION}b"] 
     preBootstrapCommands:
       - "IDX=1;for DEV in /dev/nvme[1-9]n1;do sudo mkfs.xfs ${DEV}; sudo mkdir -p /local${IDX}; sudo echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"

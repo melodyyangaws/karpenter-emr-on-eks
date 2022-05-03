@@ -21,7 +21,7 @@ echo "==============================================="
 echo "  create Cloud9 IDE environment ......"
 echo "==============================================="
 aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium
-# need the subnet id only if no default VPC in the AWS account.
+# need the subnet id only if no default VPC exists in the AWS account.
 # subnetid=$(aws ec2 describe-subnets --filters Name=tag:karpenter.sh/discovery,Values=$EKSCLUSTER_NAME Name=tag:kubernetes.io/role/elb,Values=1 --query "Subnets[].SubnetId" --output text | cut -f1)
 # aws cloud9 create-environment-ec2 --name workshop-ide --instance-type t3.medium --subnet-id $subnetid
 

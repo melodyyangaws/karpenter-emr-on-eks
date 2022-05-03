@@ -19,10 +19,3 @@ spec:
     volumeMounts:
       - name: spark-local-dir-1
         mountPath: /data1
-  tolerations:
-    - key: karpenter.sh/not-ready
-      operator: Exists
-      effect: NoSchedule
-    - key: node.kubernetes.io/unreachable
-      operator: Exists
-      effect: NoSchedule
