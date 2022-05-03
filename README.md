@@ -64,18 +64,19 @@ We have two types of Spark test jobs:
 cd karpenter-emr-on-eks
 ./install_cli.sh
 ```
-Run the wordcount job which only takes 1 minute to finish. No scaling is triggered, since they are scheduled on existing EC2 nodes.
 ```bash
+# run wordcount job on existing nodes. No scaling is triggered.
 ./example/sample-job-ca.sh
 ./example/sample-job-karpenter.sh
 ```
-After the previous job done, test a medium size job (47 executors) that takes over 40 minutes to run:
+After the previous job is done, test a medium size job (47 executors) that runs over 40 minutes:
 ```bash
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-Observe your first submission's autoscaling performance in Grafana (check out the next section). 
-Then submit the same job again while the first pair are still running, in order to force exeeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this extreme case.
+Compare their autoscaling performance in Grafana (check out the next section). 
+
+(OPTINAL) Submit the same job again while the first pair is still running, in order to force exeeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this case.
 ```bash
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
@@ -83,7 +84,7 @@ Then submit the same job again while the first pair are still running, in order 
 Note: Observe the autoscaling performance at the start of each job, and don't need to wait for them to finish. 
 
 ## 4. Observe in Grafana Dashboard
-Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), open the EMR on EKS dashboard created earlier.
+Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), open the EMR on EKS dashboard created earlier. All the metrics may take 1 minute to show up after a job is submitted.
 
 Expand the first report `Pod State Timelines`, choose different ids (EMR on EKS job ID) from the Job ID dropdown list. Let's observe the spin-up time and autoscaling performance. You can locate Job IDs from your [EMR console](https://us-east-1.console.aws.amazon.com/elasticmapreduce/home?region=us-east-1#virtual-cluster-list:).
 
