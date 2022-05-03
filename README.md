@@ -74,13 +74,13 @@ After the previous job is done, test a medium size job (47 executors) that runs 
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-Compare their autoscaling performance in Grafana (check out the next section). 
+Compare the autoscaling performance for the benchmark job (check out the next section). 
 
-(OPTINAL) Submit the same job again while the first pair is still running, in order to force exeeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this case.
+<!-- (OPTINAL) Submit the same job again while the first pair is still running, in order to force exeeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this case.
 ```bash
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
-```
+```-->
 Note: Observe the autoscaling performance at the start of each job, and don't need to wait for them to finish. 
 
 ## 4. Observe in Grafana Dashboard
