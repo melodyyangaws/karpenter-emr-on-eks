@@ -8,7 +8,7 @@ sudo mv -v /tmp/eksctl /usr/local/bin
 echo eksctl version is $(eksctl version)
 
 # Install kubectl on cloudshell
-curl -s -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -s -o kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.21.2/2021-07-05/bin/linux/amd64/kubectl
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 echo kubectl version is $(kubectl version --short --client)
 
