@@ -8,12 +8,12 @@ See the reference architecture as below:
 
 ## 1. Infrastructure setup
 
-Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). The default region is `us-east-1`. Change it if needed.
+Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). The defualt region is `us-east-1`. **Change it on your console if needed**.
 ```bash
 # download the project
 git clone https://github.com/melodyyangaws/karpenter-emr-on-eks.git
 cd karpenter-emr-on-eks
-export AWS_REGION=us-east-1
+echo $AWS_REGION
 ````
 
 The script install CLI tools, creates a new EKS cluster, enables EMR on EKS, and installs Karpenter.
