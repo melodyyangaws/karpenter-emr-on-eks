@@ -8,7 +8,7 @@ See the reference architecture as below:
 
 ## 1. Infrastructure setup
 
-Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). The defualt region is `us-east-1`. **Change it on your console if needed**.
+Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). The default region is `us-east-1`. **Change it on your console if needed**.
 ```bash
 # download the project
 git clone https://github.com/melodyyangaws/karpenter-emr-on-eks.git
@@ -42,17 +42,17 @@ docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ```
 
 ## 3. Test with sample Spark jobs
-To analyse the autoscaling perforamcne, we use [Amazon Managed Service for Prometheus (AMP)](https://aws.amazon.com/prometheus/) to ingest Spark metrics and use an [Amazon Managed Grafana](https://aws.amazon.com/grafana/) dashboard to visualize. 
+To analyse the autoscaling performance, we use [Amazon Managed Service for Prometheus (AMP)](https://aws.amazon.com/prometheus/) to ingest Spark metrics and use an [Amazon Managed Grafana](https://aws.amazon.com/grafana/) dashboard to visualize. 
 
-**Follow the [grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready. If any hyperlink in the instruction isn't clickable, ensure you have downloaded the instruction from the github**
+**Download the [Grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready. Ensure you have pushed the download button from the github.**
 
-To monitor the autoscaling status in real time, go to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" button -> select the "New tab" twice. Note the default region is `us-east-1`. Change it if your initial infra setup wasn't in the default region.
+To monitor the autoscaling status in real time, go to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" button -> select "New tab" twice. Note: the default region is `us-east-1`. **Change it on the CloudShell console if necessary**.
 
 Watch a job pod's autoscaling status in a command line window (nothing returns at the start):
 ```bash
 watch -n1 "kubectl get pod -n emr"
 ```
-Observe EC2 autoscaling status in a 2nd tab. By design, the ZONE "b" EC2/node was scheduled by Cluster Autoscaler, and ZONE "a" node was created by Karpenter.
+Observe EC2/node autoscaling status in a 2nd tab. By design, Cluster Autoscaler schedules EC2/node in ZONE "b" , and Karpenter schedules ZONE "a" node.
 ```bash
 watch -n1 "kubectl get node --label-columns=node.kubernetes.io/instance-type,karpenter.sh/capacity-type,eks.amazonaws.com/capacityType,topology.kubernetes.io/zone,app"
 ```
@@ -65,28 +65,29 @@ cd karpenter-emr-on-eks
 ./install_cli.sh
 ```
 ```bash
-# run wordcount job on existing nodes. No scaling is triggered.
+# run a job on existing nodes. No autoscaling is triggered at the node level.
 ./example/sample-job-ca.sh
 ./example/sample-job-karpenter.sh
 ```
-After the previous job is done, test a medium size job (47 executors) that runs over 40 minutes:
+Monitor the job progress in your pod's autoscaling status window. 
+
+Submit a medium size job (47 executors) once the previous job is completed.
 ```bash
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```
-Compare the autoscaling performance for the benchmark job (check out the next section). 
+Observe autoscaling status in real time by examining other tabs in Cloudshell. The scope of the workshop is to compare the autoscaling performance, not to benchmark a Spark job.  Check out the next section, and don't wait for the job to be finished. 
 
-<!-- (OPTINAL) Submit the same job again while the first pair is still running, in order to force exeeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this case.
+<!-- (OPTINAL) Submit the same job again while the first pair is still running, in order to force exceeding the max Spot instance limit in your account. Observe which scaling tool has a better performance in this case.
 ```bash
 ./example/emr6.5-benchmark-ca.sh
 ./example/emr6.5-benchmark-karpenter.sh
 ```-->
-Note: Observe the autoscaling performance at the start of each job, and don't need to wait for them to finish. 
 
 ## 4. Observe in Grafana Dashboard
-Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), open the EMR on EKS dashboard created earlier. All the metrics may take 1 minute to show up after a job is submitted.
+Go to [Amazon Grafana console](https://us-east-1.console.aws.amazon.com/grafana/home?region=us-east-1#/workspaces), and open the EMR on EKS dashboard created earlier. The metrics may take 1 minute to show up after a job is submitted.
 
-Expand the first report `Pod State Timelines`, choose different ids (EMR on EKS job ID) from the Job ID dropdown list. Let's observe the spin-up time and autoscaling performance. You can locate Job IDs from your [EMR console](https://us-east-1.console.aws.amazon.com/elasticmapreduce/home?region=us-east-1#virtual-cluster-list:).
+Expand the first graph `Pod State Timelines`, choose different ids (EMR on EKS job ID) from the Job ID dropdown list. Let's observe the job spin-up time and node autoscaling performance. You can locate Job IDs from your [EMR console](https://console.aws.amazon.com/elasticmapreduce/home?region=us-east-1#virtual-cluster-list:).
 
 To learn how to read the graph, check out the `Appendix section` at the end of the [Grafana setup instruction](./setup_grafana_dashboard.pdf).
 
