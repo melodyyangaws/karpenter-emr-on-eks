@@ -17,5 +17,7 @@ server:
   nodeSelector:
     app: kspark
     karpenter.sh/capacity-type: on-demand
+  persistentVolume:
+    enabled: false 
 alertmanager:
   enabled: false
