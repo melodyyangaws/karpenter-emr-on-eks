@@ -34,9 +34,10 @@ docker rmi $(docker images -a | awk {'print $3'}) -f
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
 aws ecr create-repository --repository-name eks-spark-benchmark --image-scanning-configuration scanOnPush=true
 # get image
-docker pull public.ecr.aws/myang-poc/benchmark:6.5
+docker logout public.ecr.aws
+docker pull public.ecr.aws/myang-poc/benchmark:emr6.5
 # tag image
-docker tag public.ecr.aws/myang-poc/benchmark:6.5 $ECR_URL/eks-spark-benchmark:emr6.5 
+docker tag public.ecr.aws/myang-poc/benchmark:emr6.5 $ECR_URL/eks-spark-benchmark:emr6.5 
 # push
 docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ```
