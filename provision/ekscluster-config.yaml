@@ -3,7 +3,7 @@ kind: ClusterConfig
 metadata:
   name: {EKSCLUSTER_NAME}
   region: {AWS_REGION}
-  version: "1.21"
+  version: "1.26"
   tags:
     karpenter.sh/discovery: {EKSCLUSTER_NAME}
     for-use-with-amazon-emr-managed-policies: "true"
