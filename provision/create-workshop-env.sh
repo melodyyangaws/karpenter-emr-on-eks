@@ -98,7 +98,7 @@ eksctl create iamserviceaccount \
 # aws iam create-service-linked-role --aws-service-name spot.amazonaws.com || true
 export KARPENTER_IAM_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-karpenter"
 helm repo add karpenter https://charts.karpenter.sh
-helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.8.1 \
+helm upgrade --install karpenter karpenter/karpenter --namespace karpenter --version 0.16.3 \
     --set serviceAccount.create=false --set serviceAccount.name=karpenter --set nodeSelector.app=ops \
     --set clusterName=${EKSCLUSTER_NAME} --set clusterEndpoint=${API_SERVER}
 

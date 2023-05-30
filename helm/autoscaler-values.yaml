@@ -2,7 +2,7 @@ autoDiscovery:
     clusterName: {EKSCLUSTER_NAME}
 awsRegion: {AWS_REGION}
 image:
-    tag: v1.21.1
+    tag: v1.26.3
 nodeSelector:
     app: ops
 podAnnotations:

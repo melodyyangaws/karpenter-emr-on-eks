@@ -8,6 +8,12 @@ See the reference architecture as below:
 
 ## 1. Infrastructure setup
 
+### Prerequisite
+- eksctl >= 0.143.0
+- Helm CLI >= 3.2.1 
+- kubectl >= 1.26.4 
+- AWS Cli >= 2.11.23
+
 Run the following scripts in [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). The default region is `us-east-1`. **Change it on your console if needed**.
 ```bash
 # download the project
