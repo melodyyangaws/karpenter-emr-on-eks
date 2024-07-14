@@ -51,7 +51,7 @@ docker push $ECR_URL/eks-spark-benchmark:emr6.5
 ## 3. Test with sample Spark jobs
 To analyse the autoscaling performance, we use [Amazon Managed Service for Prometheus (AMP)](https://aws.amazon.com/prometheus/) to ingest Spark metrics and use an [Amazon Managed Grafana](https://aws.amazon.com/grafana/) dashboard to visualize. 
 
-**Download the [Grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready. Ensure you have pushed the download button from the github. The dashbaord template file can be found in the [Data on EKS project](https://raw.githubusercontent.com/awslabs/data-on-eks/main/analytics/terraform/emr-eks-karpenter/examples/grafana-dashboard-for-spark/emr-eks-grafana-dashboard.json)**
+**Download the [Grafana setup](./setup_grafana_dashboard.pdf) instruction to get your dashboard ready. Ensure you have pushed the download button from the github. The dashbaord template file can be found in the [Data on EKS project](https://raw.githubusercontent.com/awslabs/data-on-eks/main/analytics/terraform/emr-eks-karpenter/emr-grafana-dashboard/emr-eks-grafana-dashboard.json)**
 
 To monitor the autoscaling status in real time, go to your [AWS CloudShell](https://us-east-1.console.aws.amazon.com/cloudshell?region=us-east-1). Click on the "Actions" button -> select "New tab" twice. Note: the default region is `us-east-1`. **Change it on the CloudShell console if necessary**.
 
