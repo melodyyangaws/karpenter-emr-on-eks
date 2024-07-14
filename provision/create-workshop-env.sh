@@ -112,6 +112,7 @@ echo "====================================================="
 echo "  Install Prometheus to EKS for monitroing ......"
 echo "====================================================="
 kubectl create namespace prometheus
+# SA name was created at EKS cluster creation time defined in ekscluster-config.yaml #line27
 # eksctl create iamserviceaccount \
 #     --cluster ${EKSCLUSTER_NAME} --namespace prometheus --name amp-iamproxy-ingest-service-account \
 #     --role-name "${EKSCLUSTER_NAME}-prometheus-ingest" \
@@ -127,7 +128,7 @@ else
     echo "A prometheus workspace already exists"
     export WORKSPACE_ID=$amp
 fi
-export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
+# export INGEST_ROLE_ARN="arn:aws:iam::${ACCOUNTID}:role/${EKSCLUSTER_NAME}-prometheus-ingest"
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo add kube-state-metrics https://kubernetes.github.io/kube-state-metrics
@@ -136,7 +137,12 @@ sed -i -- 's/{AWS_REGION}/'$AWS_REGION'/g' helm/prometheus_values.yaml
 sed -i -- 's/{ACCOUNTID}/'$ACCOUNTID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{WORKSPACE_ID}/'$WORKSPACE_ID'/g' helm/prometheus_values.yaml
 sed -i -- 's/{EKSCLUSTER_NAME}/'$EKSCLUSTER_NAME'/g' helm/prometheus_values.yaml
-helm upgrade --install prometheus prometheus-community/prometheus -n prometheus -f helm/prometheus_values.yaml
+helm upgrade --install prometheus prometheus-community/kube-prometheus-stack -n prometheus -f helm/prometheus_values.yaml --debug
+# validate in a web browser - localhost:9090, go to menu of status->targets
+# kubectl --namespace prometheus port-forward service/prometheus-kube-prometheus-prometheus 9090
+
+# create pod monitor for Spark apps works with Prometheus
+kubectl apply -f helm/spark-podmonitor.yaml
 
 kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
 
